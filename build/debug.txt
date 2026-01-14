@@ -1,0 +1,65 @@
+=== Particle Simulator Debug Log ===
+
+=== FRAME 0 ===
+
+=== FRAME 1 ===
+  TryMove (200,0) vel=(0,0.495) target=(200,0)
+    -> NO MOVEMENT
+  TryMove (200,0) vel=(0,0.98505) target=(200,1)
+    -> MOVED
+
+=== FRAME 2 ===
+  TryMove (200,1) vel=(0,1.4702) target=(200,2)
+    -> MOVED
+  TryMove (200,0) vel=(0,0.495) target=(200,0)
+    -> NO MOVEMENT
+  TryMove (200,0) vel=(0,0.98505) target=(200,1)
+    -> MOVED
+  TryMove (200,1) vel=(0,0.98505) target=(200,2)
+    -> COMPLETELY BLOCKED
+
+=== FRAME 3 ===
+  TryMove (200,2) vel=(0,1.9505) target=(200,4)
+    -> MOVED
+  TryMove (200,0) vel=(0,0.495) target=(200,0)
+    -> NO MOVEMENT
+  TryMove (200,0) vel=(0,0.98505) target=(200,1)
+    -> MOVED
+  TryMove (200,1) vel=(0,0.98505) target=(200,2)
+    -> MOVED
+  TryMove (200,2) vel=(0,1.4702) target=(200,3)
+    -> COMPLETELY BLOCKED
+
+=== FRAME 4 ===
+
+=== FRAME 5 ===
+  TryMove (200,0) vel=(0,0.495) target=(200,0)
+    -> NO MOVEMENT
+  TryMove (200,0) vel=(0,0.495) target=(200,0)
+    -> NO MOVEMENT
+  TryMove (200,0) vel=(0,0.98505) target=(200,1)
+    -> MOVED
+  TryMove (200,1) vel=(0,0.98505) target=(200,2)
+    -> MOVED
+  TryMove (200,2) vel=(0,1.4702) target=(200,3)
+    -> MOVED
+
+=== FRAME 6 ===
+
+=== FRAME 7 ===
+
+=== FRAME 8 ===
+  TryMove (200,2) vel=(0.58806,1.4702) target=(201,3)
+    -> MOVED
+
+=== FRAME 9 ===
+  TryMove (200,0) vel=(0,0.495) target=(200,0)
+    -> NO MOVEMENT
+  TryMove (200,0) vel=(0,0.495) target=(200,0)
+    -> NO MOVEMENT
+  TryMove (200,0) vel=(0,0.98505) target=(200,1)
+    -> MOVED
+
+=== FRAME 10 ===
+  TryMove (200,1) vel=(0,1.4702) target=(200,2)
+    -> MOVED

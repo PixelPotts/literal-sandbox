@@ -1,0 +1,409 @@
+# Particle Simulator Rules Configuration
+# Edit these values to change simulator behavior
+
+# ============================================
+# GLOBAL SETTINGS
+# ============================================
+
+window_width = 400            # Window width in SCREEN PIXELS (not grid cells)
+window_height = 400           # Window height in SCREEN PIXELS
+pixel_scale = 1                # Size of each particle in pixels (grid size = window / pixel_scale)
+fall_speed = 10                # Simulation steps per frame (higher = faster)
+process_left_to_right = true   # Processing order: true = left to right, false = right to left
+
+# ============================================
+# PHYSICS ENGINE
+# ============================================
+# Simple physics (false): Particles move 1 pixel at a time using cellular automaton rules
+# Velocity physics (true): Particles have velocity/momentum but harder to tune
+
+use_velocity_physics = false   # true = velocity/mass physics, false = simple legacy physics
+gravity = 0.5                  # Gravitational acceleration (only used in velocity physics)
+air_resistance = 0.01          # Air drag (only used in velocity physics)
+
+# ============================================
+# TEMPERATURE PHYSICS
+# ============================================
+# Heat transfer system: particles exchange temperature based on thermal properties
+# Phase changes: water->steam at boiling point, lava->obsidian when cooling
+
+energy_conversion_factor = 0.1  # Heat transfer rate (0.0-1.0, higher = faster heat spread)
+                                # 0.1 = 10% of temperature difference transferred per frame
+
+# ============================================
+# WETNESS/ABSORPTION PHYSICS
+# ============================================
+# Water absorption: water particles get absorbed into absorbent materials (sand)
+# Wetness spreading: wetness spreads between particles to equalize
+
+wetness_absorption_rate = 0.2   # Water absorption rate (0.0-1.0 per frame, higher = faster)
+                                # 0.2 = 20% of available water absorbed per frame (10x faster than old default)
+wetness_spread_rate = 0.1       # Wetness spreading rate (0.0-1.0 per frame, higher = faster)
+                                # 0.1 = 10% of wetness difference spreads per frame (10x faster than old default)
+wetness_minimum_threshold = 0.05 # Minimum wetness before spreading occurs (optimization)
+                                # 0.05 = only spread if particle has > 5% wetness (prevents micro-wetness processing)
+
+# ============================================
+# SAND PARTICLE SETTINGS
+# ============================================
+
+# Appearance
+sand_color_r = 255
+sand_color_g = 200
+sand_color_b = 100
+sand_color_variation = 30      # Random color variation (+/- range for each RGB)
+
+# Spawning
+sand_spawn_rate = 5             # Particles spawned per simulation step
+sand_spawn_position = center   # Options: center, left, right
+sand_spawn_position_randomness = 5  # Random spread from spawn position
+
+# Physics Properties
+sand_mass = 2.0                # Particle mass (heavier displaces lighter in BOTH physics modes)
+sand_friction = 0.3            # Surface friction (0.0-1.0, higher = more friction)
+sand_restitution = 0.1         # Bounciness (0.0-1.0, higher = more bouncy)
+sand_diagonal_slide_velocity = 0.6   # Horizontal velocity when sliding diagonally (lower = less sliding)
+sand_diagonal_slide_threshold = 0.25 # Min vx before adding diagonal velocity (lower = slides less)
+
+# Temperature Properties
+sand_base_temperature = 20.0   # Starting temperature in Celsius
+sand_boiling_point = 10000.0   # Temperature to convert to gas (very high = never boils)
+sand_heat_capacity = 0.8       # Energy needed to change temp (higher = harder to heat/cool)
+sand_thermal_conductivity = 0.3 # Heat transfer rate 0.0-1.0 (higher = better conductor)
+
+# Legacy Physics (simple physics mode or low-velocity behavior)
+sand_diagonal_fall_chance = 0.5  # Probability (0.0-1.0) for choosing left vs right
+sand_slope_slide_distance = 2   # Distance to check for steep slopes (0 = disabled)
+sand_horizontal_spread_distance = 1  # Distance particles spread on flat surfaces (0 = disabled)
+sand_random_tumble_chance = 0.01  # Chance (0.0-1.0) for settled particles to randomly shift
+sand_spacing_expansion_chance = 0.0  # Probability (0.0-1.0) to push neighboring particles outward (0 = disabled)
+sand_spacing_push_distance = 1  # How many cells away to push neighbors when expanding
+
+# ============================================
+# WATER PARTICLE SETTINGS
+# ============================================
+
+# Appearance
+water_color_r = 50
+water_color_g = 100
+water_color_b = 255
+water_color_variation = 20     # Random color variation (+/- range for each RGB)
+
+# Spawning
+water_spawn_rate = 3           # Particles spawned per simulation step (0 = disabled)
+water_spawn_position = left    # Options: center, left, right
+water_spawn_position_randomness = 5  # Random spread from spawn position
+
+# Physics Properties
+water_mass = 1.0               # Particle mass (lighter than sand, gets displaced in BOTH physics modes)
+water_friction = 0.05          # Surface friction (low = flows easily)
+water_restitution = 0.05       # Bounciness (low = doesn't bounce much)
+water_diagonal_slide_velocity = 1.0   # Horizontal velocity when sliding diagonally (higher = more flowing)
+water_diagonal_slide_threshold = 0.4  # Min vx before adding diagonal velocity
+
+# Temperature Properties
+water_base_temperature = 20.0  # Starting temperature in Celsius
+water_boiling_point = 100.0    # Temperature to convert to steam
+water_heat_capacity = 4.2      # Energy needed to change temp (water has very high heat capacity)
+water_thermal_conductivity = 0.6 # Heat transfer rate 0.0-1.0
+
+# Legacy Physics (simple physics mode or low-velocity behavior)
+water_horizontal_flow_speed = 3   # How far water flows horizontally per step
+water_dispersion_chance = 0.5     # Probability (0.0-1.0) for flow direction
+water_spacing_expansion_chance = 0.0  # Probability (0.0-1.0) to push neighboring particles outward (0 = disabled)
+water_spacing_push_distance = 1  # How many cells away to push neighbors when expanding
+
+# ============================================
+# ROCK PARTICLE SETTINGS
+# ============================================
+
+# Appearance
+rock_color_r = 128
+rock_color_g = 128
+rock_color_b = 128
+rock_color_variation = 20      # Random color variation (+/- range for each RGB)
+
+# Physics Properties
+rock_mass = 5.0                # Particle mass (very heavy, displaces both sand and water)
+rock_spacing_expansion_chance = 0.0  # Probability (0.0-1.0) to push neighboring particles outward (0 = disabled)
+rock_spacing_push_distance = 1  # How many cells away to push neighbors when expanding
+
+# Temperature Properties
+rock_base_temperature = 20.0   # Starting temperature in Celsius
+rock_boiling_point = 10000.0   # Temperature to convert to gas (very high = never boils)
+rock_heat_capacity = 0.8       # Energy needed to change temp
+rock_thermal_conductivity = 0.4 # Heat transfer rate 0.0-1.0 (decent conductor)
+
+# ============================================
+# LAVA PARTICLE SETTINGS
+# ============================================
+
+# Appearance
+lava_color_r = 255
+lava_color_g = 100
+lava_color_b = 0
+lava_color_variation = 5      # Random color variation (+/- range for each RGB)
+
+# Spawning
+lava_spawn_rate = 1            # Particles spawned per simulation step (0 = disabled)
+lava_spawn_position = right    # Options: center, left, right
+lava_spawn_position_randomness = 5  # Random spread from spawn position
+
+# Physics Properties
+lava_mass = 2.0                # Particle mass (denser than sand, lighter than rock)
+lava_friction = 0.2            # Surface friction (low = flows easily)
+lava_restitution = 0.1         # Bounciness (low = doesn't bounce much)
+lava_diagonal_slide_velocity = 0.5   # Horizontal velocity when sliding diagonally
+lava_diagonal_slide_threshold = 0.3  # Min vx before adding diagonal velocity
+
+# Legacy Physics
+lava_diagonal_fall_chance = 0.5  # Probability (0.0-1.0) for choosing left vs right
+lava_slope_slide_distance = 2    # Distance to check for steep slopes
+lava_horizontal_spread_distance = 1  # Distance particles spread on flat surfaces
+lava_random_tumble_chance = 0.01  # Chance for settled particles to randomly shift
+lava_horizontal_flow_speed = 1    # How far lava flows horizontally per step
+lava_water_dispersion_chance = 0.5  # Probability for flow direction
+lava_spacing_expansion_chance = 0.0  # Probability (0.0-1.0) to push neighboring particles outward (0 = disabled)
+lava_spacing_push_distance = 1  # How many cells away to push neighbors when expanding
+
+# Temperature Properties
+lava_base_temperature = 1000.0  # Starting temperature in Celsius (very hot!)
+lava_boiling_point = 10000.0    # Temperature to convert to gas (never boils, but cools to obsidian at 600°C)
+lava_heat_capacity = 20.0       # Energy needed to change temp (very high = cools slowly)
+lava_thermal_conductivity = 0.8 # Heat transfer rate 0.0-1.0 (excellent conductor, heats things quickly)
+
+# Special Properties
+# - Heats nearby particles through temperature system
+# - Converts to obsidian when temperature drops below 600°C
+# - Acts like heavy liquid that flows slowly
+
+# ============================================
+# STEAM PARTICLE SETTINGS
+# ============================================
+
+# Appearance
+steam_color_r = 200
+steam_color_g = 200
+steam_color_b = 200
+steam_color_variation = 30     # Random color variation (+/- range for each RGB)
+
+# Spawning
+steam_spawn_rate = 5           # Particles spawned per simulation step (0 = disabled)
+steam_spawn_position = center  # Options: center, left, right
+steam_spawn_position_randomness = 5  # Random spread from spawn position
+
+# Physics Properties
+steam_mass = -1.0              # NEGATIVE MASS makes steam rise instead of fall!
+steam_friction = 0.01          # Surface friction (very low = flows freely)
+steam_restitution = 0.05       # Bounciness
+steam_diagonal_slide_velocity = 1.0   # Horizontal velocity when sliding diagonally
+steam_diagonal_slide_threshold = 0.5  # Min vx before adding diagonal velocity
+
+# Legacy Physics
+steam_diagonal_fall_chance = 0.5  # Probability for choosing left vs right when rising
+steam_slope_slide_distance = 0    # No slope sliding for steam
+steam_horizontal_spread_distance = 0  # No horizontal spread
+steam_random_tumble_chance = 0.0  # No tumbling for steam
+steam_horizontal_flow_speed = 2   # How far steam spreads horizontally per step
+steam_water_dispersion_chance = 0.5  # Probability for flow direction
+steam_spacing_expansion_chance = 0.7  # Probability (0.0-1.0) to push neighboring particles outward
+steam_spacing_push_distance = 3  # How many cells away to push neighbors (1-3 typical, 3 = strong expansion)
+
+# Temperature Properties
+steam_base_temperature = 100.0  # Starting temperature in Celsius (hot steam)
+steam_boiling_point = 10000.0   # Temperature to convert to gas (already a gas, doesn't boil)
+steam_heat_capacity = 2.0       # Energy needed to change temp (gases have lower heat capacity)
+steam_thermal_conductivity = 0.2 # Heat transfer rate 0.0-1.0 (gases are poor conductors)
+
+# Special Properties
+# - Rises upward due to negative mass
+# - Created when water reaches boiling point (100°C)
+# - Displaces heavier particles as it rises
+# - Expands to push neighbors away (creates space)
+
+# ============================================
+# OBSIDIAN PARTICLE SETTINGS
+# ============================================
+
+# Appearance
+obsidian_color_r = 30
+obsidian_color_g = 20
+obsidian_color_b = 40
+obsidian_color_variation = 15      # Random color variation (+/- range for each RGB)
+
+# Physics Properties
+obsidian_mass = 6.0                # Particle mass (heavier than rock)
+obsidian_spacing_expansion_chance = 0.0  # Probability (0.0-1.0) to push neighboring particles outward (0 = disabled)
+obsidian_spacing_push_distance = 1  # How many cells away to push neighbors when expanding
+
+# Temperature Properties
+obsidian_base_temperature = 600.0  # Starting temperature in Celsius (cooled lava)
+obsidian_boiling_point = 10000.0   # Temperature to convert to gas (never boils)
+obsidian_heat_capacity = 0.8       # Energy needed to change temp
+obsidian_thermal_conductivity = 0.5 # Heat transfer rate 0.0-1.0
+
+# Special Properties
+# - Created when lava cools below 600°C (typically when touching water)
+# - Very heavy and static, like volcanic glass
+# - Dark purple/black color
+
+# ============================================
+# FIRE PARTICLE SETTINGS
+# ============================================
+
+# Appearance
+fire_color_r = 255
+fire_color_g = 100
+fire_color_b = 0
+fire_color_variation = 80        # High variation for flickering effect (creates reds/oranges/yellows)
+
+# Spawning
+fire_spawn_rate = 0              # Particles spawned per simulation step (0 = disabled)
+
+# Physics Properties
+fire_mass = -0.3                 # Negative mass makes fire rise (lighter than air)
+fire_horizontal_spread_distance = 2   # Distance fire spreads on surfaces
+fire_random_tumble_chance = 0.05      # Chance (0.0-1.0) for fire to burn out per frame (5% = ~1-2 seconds lifetime)
+fire_horizontal_flow_speed = 2        # How far fire spreads horizontally per step
+fire_spacing_expansion_chance = 0.3   # Fire expands like gas
+fire_spacing_push_distance = 2        # Push neighbors 2 cells away
+
+# Temperature Properties
+fire_base_temperature = 800.0   # Starting temperature in Celsius (very hot!)
+fire_boiling_point = 10000.0    # Temperature to convert to gas (already a combustion gas, doesn't boil)
+fire_heat_capacity = 1.0        # Energy needed to change temp
+fire_thermal_conductivity = 0.7 # Heat transfer rate 0.0-1.0 (heats nearby particles quickly)
+
+# Special Properties
+# - Rises upward like smoke/gas
+# - Burns out over time (converts to steam or disappears)
+# - Heats nearby particles through temperature system
+# - High color variation creates realistic flickering flames
+# - Spreads horizontally to simulate fire spreading
+
+# ============================================
+# ICE PARTICLE SETTINGS
+# ============================================
+
+# Appearance
+ice_color_r = 200
+ice_color_g = 230
+ice_color_b = 255
+ice_color_variation = 15
+
+# Physics Properties
+ice_mass = 0.9                       # Slightly less dense than water (floats!)
+
+# Temperature Properties
+ice_base_temperature = -10.0         # Below freezing
+ice_melting_point = 0.0              # Melts to water at 0°C
+ice_boiling_point = 100.0            # Would become steam if heated past water phase
+ice_heat_capacity = 2.1              # Energy needed to change temp
+ice_thermal_conductivity = 0.4       # Heat transfer rate (poor conductor)
+
+# Special Properties
+# - Frozen water
+# - Floats on water (slightly less dense)
+# - Melts to water at 0°C
+# - Created when water cools below 0°C
+
+# ============================================
+# GLASS PARTICLE SETTINGS
+# ============================================
+
+# Appearance
+glass_color_r = 100
+glass_color_g = 180
+glass_color_b = 180
+glass_color_variation = 20
+
+# Physics Properties
+glass_mass = 2.5                     # Similar density to sand
+
+# Temperature Properties
+glass_base_temperature = 1700.0      # Hot from melting (cools gradually)
+glass_melting_point = 1700.0         # Melts at extreme temperature
+glass_boiling_point = 2950.0         # Boils at extreme temp
+glass_heat_capacity = 0.8            # Energy needed to change temp
+glass_thermal_conductivity = 0.7     # Heat transfer rate (better than sand)
+
+# Special Properties
+# - Created when sand melts at 1700°C
+# - Semi-transparent cyan/teal color
+# - Falls like sand but smoother
+# - Doesn't melt back to sand (one-way transformation)
+
+
+
+# ============================================
+# WOOD PARTICLE SETTINGS
+# ============================================
+
+# Appearance
+wood_color_r = 139
+wood_color_g = 90
+wood_color_b = 43
+wood_color_variation = 20
+
+# Physics Properties
+wood_mass = 0.6                      # Less dense than water (floats!)
+
+# Temperature Properties
+wood_base_temperature = 20.0         # Room temperature
+wood_melting_point = 300.0           # Burns/chars at ~300°C
+wood_boiling_point = 450.0           # Combusts (becomes fire) at ~450°C
+wood_heat_capacity = 1.7             # Energy needed to change temp
+wood_thermal_conductivity = 0.15     # Heat transfer rate (poor conductor/insulator)
+wood_max_saturation = 0.5            # Wood absorbs water well
+
+# Special Properties
+# - Floats on water (less dense than water)
+# - Burns when heated above 450°C or touched by fire/lava
+# - Transforms to fire when ignited
+# - Blocks fall together in clusters like rocks
+# - Can absorb water up to 50% saturation
+
+# USAGE GUIDE
+# ============================================
+#
+# VELOCITY PHYSICS (use_velocity_physics = true):
+# - Particles have velocity and accelerate due to gravity
+# - Heavier particles (higher mass) push lighter ones aside
+# - Friction slows particles when resting on surfaces
+# - More realistic physics with momentum and collisions
+# - sand_mass = 2.0, water_mass = 1.0 means sand sinks through water
+#
+# LEGACY PHYSICS (use_velocity_physics = false):
+# - Simple cellular automaton rules
+# - Particles fall straight down or diagonally
+# - No velocity or momentum tracking
+# - Faster but less realistic
+#
+# SPAWN POSITIONS:
+# - center: Particles spawn at middle of screen
+# - left: Particles spawn at left edge (good for water)
+# - right: Particles spawn at right edge
+# - Use randomness to spread spawn area
+#
+# MASS INTERACTIONS (works in BOTH simple and velocity physics):
+# - Higher mass particles displace lower mass particles by swapping positions
+# - sand_mass=2.0, water_mass=1.0 means sand sinks through water
+# - When sand falls onto water, they swap - sand moves down, water moves up
+# - Set water_mass > sand_mass for water to float above sand (unrealistic but fun)
+#
+# TUNING TIPS:
+# - Start with current "mild" settings
+# - Increase gravity (0.8-1.5) for faster falling
+# - Increase friction (0.5-0.8) for sand that sticks more
+# - Decrease water_friction (0.01-0.03) for super-fluid water
+# - Try: sand from center, water from left for interesting interactions
+#
+# DIAGONAL SLIDING BEHAVIOR:
+# - IMPORTANT: With fall_speed=10, particles move 10 times per visual frame
+# - diagonal_slide_velocity=0.6 can move up to 6 pixels per frame if unobstructed
+# - diagonal_slide_velocity must be high enough to survive friction
+# - With friction=0.3, velocity is multiplied by 0.7 each step
+# - If particles don't slide at all: increase diagonal_slide_velocity
+# - If particles slide to walls instantly: decrease diagonal_slide_velocity
+# - If particles slide too far: decrease diagonal_slide_velocity OR increase friction
+# - diagonal_slide_threshold controls when sliding stops (lower = settles faster)

@@ -1,0 +1,3 @@
+/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles/sand_simulator.dir
+/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles/edit_cache.dir
+/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles/rebuild_cache.dir
