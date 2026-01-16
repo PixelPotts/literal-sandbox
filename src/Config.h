@@ -43,6 +43,14 @@ struct ParticleTypeConfig {
 
     // Wetness/absorption properties
     float maxSaturation;           // Maximum wetness this material can hold (0.0 = none, 1.0 = fully saturated)
+
+    // Inner rock generation
+    int innerRockSpawnChance;
+    int innerRockMinSize;
+    int innerRockMaxSize;
+    float innerRockMinRadius;
+    float innerRockMaxRadius;
+    float innerRockDarkness;
 };
 
 struct Config {
@@ -56,6 +64,7 @@ struct Config {
     float gravity;
     float airResistance;
     bool useVelocityPhysics;
+    float particleFallAcceleration;
 
     // Temperature physics
     float energyConversionFactor;  // Multiplier for heat transfer rate (0.0-1.0)
@@ -75,6 +84,7 @@ struct Config {
     ParticleTypeConfig ice;
     ParticleTypeConfig glass;
     ParticleTypeConfig wood;
+    ParticleTypeConfig moss;
 
     Config();
     bool loadFromFile(const std::string& filename);

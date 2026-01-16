@@ -55,6 +55,12 @@ void Config::setDefaults() {
     sand.heatCapacity = 0.8f;            // Moderate heat capacity
     sand.thermalConductivity = 0.3f;     // Poor conductor
     sand.maxSaturation = 0.3f;           // Can absorb water up to 30% saturation
+    sand.innerRockSpawnChance = 0;
+    sand.innerRockMinSize = 0;
+    sand.innerRockMaxSize = 0;
+    sand.innerRockMinRadius = 0;
+    sand.innerRockMaxRadius = 0;
+    sand.innerRockDarkness = 0.5f;
 
     // Water defaults
     water.colorR = 50;
@@ -84,6 +90,12 @@ void Config::setDefaults() {
     water.heatCapacity = 4.2f;           // High heat capacity (takes lots of energy to heat)
     water.thermalConductivity = 0.6f;    // Good conductor
     water.maxSaturation = 0.0f;          // Water doesn't absorb wetness
+    water.innerRockSpawnChance = 0;
+    water.innerRockMinSize = 0;
+    water.innerRockMaxSize = 0;
+    water.innerRockMinRadius = 0;
+    water.innerRockMaxRadius = 0;
+    water.innerRockDarkness = 0.5f;
 
     // Rock defaults
     rock.colorR = 128;
@@ -113,6 +125,12 @@ void Config::setDefaults() {
     rock.heatCapacity = 0.9f;            // Moderate heat capacity
     rock.thermalConductivity = 0.5f;     // Decent conductor
     rock.maxSaturation = 0.0f;           // Rock doesn't absorb water
+    rock.innerRockSpawnChance = 100;
+    rock.innerRockMinSize = 3;
+    rock.innerRockMaxSize = 7;
+    rock.innerRockMinRadius = 1.0f;
+    rock.innerRockMaxRadius = 2.5f;
+    rock.innerRockDarkness = 0.8f;
 
     // Lava defaults
     lava.colorR = 255;
@@ -142,6 +160,12 @@ void Config::setDefaults() {
     lava.heatCapacity = 20.0f;           // Very high heat capacity (cools slowly)
     lava.thermalConductivity = 0.8f;     // Good heat conductor
     lava.maxSaturation = 0.0f;           // Lava doesn't absorb water
+    lava.innerRockSpawnChance = 0;
+    lava.innerRockMinSize = 0;
+    lava.innerRockMaxSize = 0;
+    lava.innerRockMinRadius = 0;
+    lava.innerRockMaxRadius = 0;
+    lava.innerRockDarkness = 0.5f;
 
     // Steam defaults
     steam.colorR = 240;
@@ -171,6 +195,12 @@ void Config::setDefaults() {
     steam.heatCapacity = 2.0f;           // Moderate heat capacity
     steam.thermalConductivity = 0.2f;    // Poor conductor (gas)
     steam.maxSaturation = 0.0f;          // Steam doesn't absorb water
+    steam.innerRockSpawnChance = 0;
+    steam.innerRockMinSize = 0;
+    steam.innerRockMaxSize = 0;
+    steam.innerRockMinRadius = 0;
+    steam.innerRockMaxRadius = 0;
+    steam.innerRockDarkness = 0.5f;
 
     // Obsidian defaults
     obsidian.colorR = 30;
@@ -200,6 +230,12 @@ void Config::setDefaults() {
     obsidian.heatCapacity = 0.8f;        // Moderate heat capacity
     obsidian.thermalConductivity = 0.5f; // Moderate conductor
     obsidian.maxSaturation = 0.0f;       // Obsidian doesn't absorb water
+    obsidian.innerRockSpawnChance = 2000;
+    obsidian.innerRockMinSize = 20;
+    obsidian.innerRockMaxSize = 100;
+    obsidian.innerRockMinRadius = 10.0f;
+    obsidian.innerRockMaxRadius = 30.5f;
+    obsidian.innerRockDarkness = 0.9f;
 
     // Fire defaults
     fire.colorR = 255;
@@ -229,6 +265,12 @@ void Config::setDefaults() {
     fire.heatCapacity = 1.0f;            // Moderate heat capacity
     fire.thermalConductivity = 0.7f;     // Good heat transfer
     fire.maxSaturation = 0.0f;           // Fire doesn't absorb water
+    fire.innerRockSpawnChance = 0;
+    fire.innerRockMinSize = 0;
+    fire.innerRockMaxSize = 0;
+    fire.innerRockMinRadius = 0;
+    fire.innerRockMaxRadius = 0;
+    fire.innerRockDarkness = 0.5f;
 
     // Ice defaults
     ice.colorR = 200;
@@ -258,6 +300,12 @@ void Config::setDefaults() {
     ice.heatCapacity = 2.1f;             // Lower than water
     ice.thermalConductivity = 0.4f;      // Poor conductor
     ice.maxSaturation = 0.0f;            // Ice doesn't absorb water
+    ice.innerRockSpawnChance = 0;
+    ice.innerRockMinSize = 0;
+    ice.innerRockMaxSize = 0;
+    ice.innerRockMinRadius = 0;
+    ice.innerRockMaxRadius = 0;
+    ice.innerRockDarkness = 0.5f;
 
     // Glass defaults
     glass.colorR = 100;
@@ -287,6 +335,12 @@ void Config::setDefaults() {
     glass.heatCapacity = 0.8f;           // Similar to sand
     glass.thermalConductivity = 0.7f;    // Better conductor than sand
     glass.maxSaturation = 0.0f;          // Glass doesn't absorb water
+    glass.innerRockSpawnChance = 0;
+    glass.innerRockMinSize = 0;
+    glass.innerRockMaxSize = 0;
+    glass.innerRockMinRadius = 0;
+    glass.innerRockMaxRadius = 0;
+    glass.innerRockDarkness = 0.5f;
 
     // Wood defaults
     wood.colorR = 139;
@@ -316,6 +370,47 @@ void Config::setDefaults() {
     wood.heatCapacity = 1.7f;            // Moderate heat capacity
     wood.thermalConductivity = 0.15f;    // Poor conductor (insulator)
     wood.maxSaturation = 0.5f;           // Wood absorbs water well
+    wood.innerRockSpawnChance = 0;
+    wood.innerRockMinSize = 0;
+    wood.innerRockMaxSize = 0;
+    wood.innerRockMinRadius = 0;
+    wood.innerRockMaxRadius = 0;
+    wood.innerRockDarkness = 0.5f;
+
+    // Moss defaults
+    moss.colorR = 0;
+    moss.colorG = 150;
+    moss.colorB = 0;
+    moss.spawnRate = 0;
+    moss.spawnPosition = SpawnPosition::CENTER;
+    moss.spawnPositionRandomness = 0;
+    moss.colorVariation = 40;
+    moss.mass = 0.2f;
+    moss.friction = 0.8f;
+    moss.restitution = 0.05f;
+    moss.diagonalSlideVelocity = 0.0f;
+    moss.diagonalSlideThreshold = 0.0f;
+    moss.movementFrequency = 100;
+    moss.diagonalFallChance = 0.1f;
+    moss.slopeSlideDistance = 0;
+    moss.horizontalSpreadDistance = 0;
+    moss.randomTumbleChance = 0.0f;
+    moss.horizontalFlowSpeed = 0;
+    moss.waterDispersionChance = 0.1f;
+    moss.spacingExpansionChance = 0.0f;
+    moss.spacingPushDistance = 1;
+    moss.baseTemperature = 20.0f;
+    moss.meltingPoint = 200.0f;
+    moss.boilingPoint = 300.0f;
+    moss.heatCapacity = 1.5f;
+    moss.thermalConductivity = 0.2f;
+    moss.maxSaturation = 0.8f;
+    moss.innerRockSpawnChance = 0;
+    moss.innerRockMinSize = 0;
+    moss.innerRockMaxSize = 0;
+    moss.innerRockMinRadius = 0;
+    moss.innerRockMaxRadius = 0;
+    moss.innerRockDarkness = 0.5f;
 }
 
 bool Config::loadFromFile(const std::string& filename) {
@@ -435,6 +530,12 @@ void Config::parseLine(const std::string& line) {
     else if (key == "rock_boiling_point") iss >> rock.boilingPoint;
     else if (key == "rock_heat_capacity") iss >> rock.heatCapacity;
     else if (key == "rock_thermal_conductivity") iss >> rock.thermalConductivity;
+    else if (key == "rock_inner_rock_spawn_chance") iss >> rock.innerRockSpawnChance;
+    else if (key == "rock_inner_rock_min_size") iss >> rock.innerRockMinSize;
+    else if (key == "rock_inner_rock_max_size") iss >> rock.innerRockMaxSize;
+    else if (key == "rock_inner_rock_min_radius") iss >> rock.innerRockMinRadius;
+    else if (key == "rock_inner_rock_max_radius") iss >> rock.innerRockMaxRadius;
+    else if (key == "rock_inner_rock_darkness") iss >> rock.innerRockDarkness;
     // Lava settings
     else if (key == "lava_color_r") iss >> lava.colorR;
     else if (key == "lava_color_g") iss >> lava.colorG;
@@ -512,6 +613,12 @@ void Config::parseLine(const std::string& line) {
     else if (key == "obsidian_boiling_point") iss >> obsidian.boilingPoint;
     else if (key == "obsidian_heat_capacity") iss >> obsidian.heatCapacity;
     else if (key == "obsidian_thermal_conductivity") iss >> obsidian.thermalConductivity;
+    else if (key == "obsidian_inner_rock_spawn_chance") iss >> obsidian.innerRockSpawnChance;
+    else if (key == "obsidian_inner_rock_min_size") iss >> obsidian.innerRockMinSize;
+    else if (key == "obsidian_inner_rock_max_size") iss >> obsidian.innerRockMaxSize;
+    else if (key == "obsidian_inner_rock_min_radius") iss >> obsidian.innerRockMinRadius;
+    else if (key == "obsidian_inner_rock_max_radius") iss >> obsidian.innerRockMaxRadius;
+    else if (key == "obsidian_inner_rock_darkness") iss >> obsidian.innerRockDarkness;
     // Fire settings
     else if (key == "fire_color_r") iss >> fire.colorR;
     else if (key == "fire_color_g") iss >> fire.colorG;
@@ -563,4 +670,16 @@ void Config::parseLine(const std::string& line) {
     else if (key == "wood_heat_capacity") iss >> wood.heatCapacity;
     else if (key == "wood_thermal_conductivity") iss >> wood.thermalConductivity;
     else if (key == "wood_max_saturation") iss >> wood.maxSaturation;
+    // Moss settings
+    else if (key == "moss_color_r") iss >> moss.colorR;
+    else if (key == "moss_color_g") iss >> moss.colorG;
+    else if (key == "moss_color_b") iss >> moss.colorB;
+    else if (key == "moss_color_variation") iss >> moss.colorVariation;
+    else if (key == "moss_mass") iss >> moss.mass;
+    else if (key == "moss_base_temperature") iss >> moss.baseTemperature;
+    else if (key == "moss_melting_point") iss >> moss.meltingPoint;
+    else if (key == "moss_boiling_point") iss >> moss.boilingPoint;
+    else if (key == "moss_heat_capacity") iss >> moss.heatCapacity;
+    else if (key == "moss_thermal_conductivity") iss >> moss.thermalConductivity;
+    else if (key == "moss_max_saturation") iss >> moss.maxSaturation;
 }

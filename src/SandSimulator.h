@@ -16,7 +16,8 @@ enum class ParticleType : unsigned char {
     FIRE = 7,
     ICE = 8,
     GLASS = 9,
-    WOOD = 10
+    WOOD = 10,
+    MOSS = 11
 };
 
 struct ParticleColor {

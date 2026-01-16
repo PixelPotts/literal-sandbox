@@ -111,11 +111,86 @@ CMakeFiles/sand_simulator.dir/src/SandSimulator.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/sand_simulator.dir/src/SandSimulator.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/SandSimulator.cpp -o CMakeFiles/sand_simulator.dir/src/SandSimulator.cpp.s
 
+CMakeFiles/sand_simulator.dir/src/World.cpp.o: CMakeFiles/sand_simulator.dir/flags.make
+CMakeFiles/sand_simulator.dir/src/World.cpp.o: /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/World.cpp
+CMakeFiles/sand_simulator.dir/src/World.cpp.o: CMakeFiles/sand_simulator.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/sand_simulator.dir/src/World.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/sand_simulator.dir/src/World.cpp.o -MF CMakeFiles/sand_simulator.dir/src/World.cpp.o.d -o CMakeFiles/sand_simulator.dir/src/World.cpp.o -c /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/World.cpp
+
+CMakeFiles/sand_simulator.dir/src/World.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/sand_simulator.dir/src/World.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/World.cpp > CMakeFiles/sand_simulator.dir/src/World.cpp.i
+
+CMakeFiles/sand_simulator.dir/src/World.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/sand_simulator.dir/src/World.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/World.cpp -o CMakeFiles/sand_simulator.dir/src/World.cpp.s
+
+CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.o: CMakeFiles/sand_simulator.dir/flags.make
+CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.o: /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/WorldChunk.cpp
+CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.o: CMakeFiles/sand_simulator.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.o -MF CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.o.d -o CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.o -c /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/WorldChunk.cpp
+
+CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/WorldChunk.cpp > CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.i
+
+CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/WorldChunk.cpp -o CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.s
+
+CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o: CMakeFiles/sand_simulator.dir/flags.make
+CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o: /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Sprite.cpp
+CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o: CMakeFiles/sand_simulator.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o -MF CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o.d -o CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o -c /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Sprite.cpp
+
+CMakeFiles/sand_simulator.dir/src/Sprite.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/sand_simulator.dir/src/Sprite.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Sprite.cpp > CMakeFiles/sand_simulator.dir/src/Sprite.cpp.i
+
+CMakeFiles/sand_simulator.dir/src/Sprite.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/sand_simulator.dir/src/Sprite.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Sprite.cpp -o CMakeFiles/sand_simulator.dir/src/Sprite.cpp.s
+
+CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o: CMakeFiles/sand_simulator.dir/flags.make
+CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o: /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/SceneObject.cpp
+CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o: CMakeFiles/sand_simulator.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o -MF CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o.d -o CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o -c /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/SceneObject.cpp
+
+CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/SceneObject.cpp > CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.i
+
+CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/SceneObject.cpp -o CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.s
+
+CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o: CMakeFiles/sand_simulator.dir/flags.make
+CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o: /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/stb_image_impl.cpp
+CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o: CMakeFiles/sand_simulator.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o -MF CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o.d -o CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o -c /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/stb_image_impl.cpp
+
+CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/stb_image_impl.cpp > CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.i
+
+CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/stb_image_impl.cpp -o CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.s
+
 # Object files for target sand_simulator
 sand_simulator_OBJECTS = \
 "CMakeFiles/sand_simulator.dir/src/main.cpp.o" \
 "CMakeFiles/sand_simulator.dir/src/Config.cpp.o" \
-"CMakeFiles/sand_simulator.dir/src/SandSimulator.cpp.o"
+"CMakeFiles/sand_simulator.dir/src/SandSimulator.cpp.o" \
+"CMakeFiles/sand_simulator.dir/src/World.cpp.o" \
+"CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.o" \
+"CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o" \
+"CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o" \
+"CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o"
 
 # External object files for target sand_simulator
 sand_simulator_EXTERNAL_OBJECTS =
@@ -123,13 +198,18 @@ sand_simulator_EXTERNAL_OBJECTS =
 sand_simulator: CMakeFiles/sand_simulator.dir/src/main.cpp.o
 sand_simulator: CMakeFiles/sand_simulator.dir/src/Config.cpp.o
 sand_simulator: CMakeFiles/sand_simulator.dir/src/SandSimulator.cpp.o
+sand_simulator: CMakeFiles/sand_simulator.dir/src/World.cpp.o
+sand_simulator: CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.o
+sand_simulator: CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o
+sand_simulator: CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o
+sand_simulator: CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o
 sand_simulator: CMakeFiles/sand_simulator.dir/build.make
 sand_simulator: /usr/lib/x86_64-linux-gnu/libSDL2.so
 sand_simulator: /usr/lib/x86_64-linux-gnu/libSDL2_ttf.so
 sand_simulator: /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so
 sand_simulator: /usr/lib/x86_64-linux-gnu/libpthread.a
 sand_simulator: CMakeFiles/sand_simulator.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX executable sand_simulator"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Linking CXX executable sand_simulator"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/sand_simulator.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

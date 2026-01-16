@@ -1,0 +1,1440 @@
+#include "World.h"
+#include "SandSimulator.h"
+#include <cstdlib>
+#include <ctime>
+#include <cmath>
+#include <algorithm>
+#include <iostream>
+#include <chrono>
+
+// Allow large images (up to 35840x35840 for world images)
+#define STBI_MAX_DIMENSIONS 33554432
+#include "stb_image.h"
+
+World::World(const Config& cfg) : config(cfg) {
+    std::srand(std::time(nullptr));
+
+    // Initialize camera at bottom-left of world
+    camera.x = 0;
+    camera.y = WORLD_HEIGHT - camera.viewportHeight;  // Bottom of world
+    camera.moveSpeed = 25.0f;  // 25 pixels per second as requested
+}
+
+World::~World() {
+    if (sceneImageData) {
+        stbi_image_free(sceneImageData);
+        sceneImageData = nullptr;
+    }
+}
+
+void World::moveCamera(float dx, float dy, float deltaTime) {
+    float moveAmount = camera.moveSpeed * deltaTime;
+
+    camera.x += dx * moveAmount;
+    camera.y += dy * moveAmount;
+
+    // Clamp to world bounds
+    camera.x = std::max(0.0f, std::min(camera.x, (float)(WORLD_WIDTH - camera.viewportWidth)));
+    camera.y = std::max(0.0f, std::min(camera.y, (float)(WORLD_HEIGHT - camera.viewportHeight)));
+}
+
+// World coordinate conversions
+void World::worldToChunk(int worldX, int worldY, int& chunkX, int& chunkY) {
+    chunkX = worldX / WorldChunk::CHUNK_SIZE;
+    chunkY = worldY / WorldChunk::CHUNK_SIZE;
+}
+
+void World::worldToLocal(int worldX, int worldY, int& localX, int& localY) {
+    localX = worldX % WorldChunk::CHUNK_SIZE;
+    localY = worldY % WorldChunk::CHUNK_SIZE;
+}
+
+void World::chunkToWorld(int chunkX, int chunkY, int& worldX, int& worldY) {
+    worldX = chunkX * WorldChunk::CHUNK_SIZE;
+    worldY = chunkY * WorldChunk::CHUNK_SIZE;
+}
+
+bool World::inWorldBounds(int worldX, int worldY) const {
+    return worldX >= 0 && worldX < WORLD_WIDTH && worldY >= 0 && worldY < WORLD_HEIGHT;
+}
+
+WorldChunk* World::getChunk(int chunkX, int chunkY) {
+    if (chunkX < 0 || chunkX >= WORLD_CHUNKS_X || chunkY < 0 || chunkY >= WORLD_CHUNKS_Y) {
+        return nullptr;
+    }
+
+    ChunkKey key{chunkX, chunkY};
+    auto it = chunks.find(key);
+    if (it != chunks.end()) {
+        return it->second.get();
+    }
+
+    // Create new chunk on demand
+    auto chunk = std::make_unique<WorldChunk>(chunkX, chunkY);
+    WorldChunk* ptr = chunk.get();
+    chunks[key] = std::move(chunk);
+
+    // Populate from scene image if available and not already done
+    if (sceneImageData && chunksPopulatedFromScene.find(key) == chunksPopulatedFromScene.end()) {
+        populateChunkFromScene(ptr);
+        chunksPopulatedFromScene[key] = true;
+    }
+
+    procedurallyGenerateMoss(ptr);
+    procedurallyGenerateInnerRocks(ptr);
+
+    return ptr;
+}
+
+bool World::setSceneImage(const std::string& filepath) {
+    // Free existing image if any
+    if (sceneImageData) {
+        stbi_image_free(sceneImageData);
+        sceneImageData = nullptr;
+    }
+
+    int channels;
+    sceneImageData = stbi_load(filepath.c_str(), &sceneImageWidth, &sceneImageHeight, &channels, 3);
+
+    if (!sceneImageData) {
+        std::cerr << "Failed to load scene image: " << filepath << std::endl;
+        std::cerr << "stbi error: " << stbi_failure_reason() << std::endl;
+        return false;
+    }
+
+    std::cout << "Scene image loaded: " << filepath << " (" << sceneImageWidth << "x" << sceneImageHeight << ")" << std::endl;
+    std::cout << "Image covers world Y range: " << (WORLD_HEIGHT - sceneImageHeight) << " to " << WORLD_HEIGHT << std::endl;
+    std::cout << "Image covers world X range: 0 to " << sceneImageWidth << std::endl;
+
+    // Clear the populated tracking so chunks can be repopulated
+    chunksPopulatedFromScene.clear();
+
+    return true;
+}
+
+void World::populateChunkFromScene(WorldChunk* chunk) {
+    if (!sceneImageData || !chunk) return;
+
+    int chunkWorldX = chunk->getWorldX();
+    int chunkWorldY = chunk->getWorldY();
+
+    // The image is placed at bottom-left of world
+    // Image Y=0 corresponds to world Y = WORLD_HEIGHT - sceneImageHeight
+    int imageBaseY = WORLD_HEIGHT - sceneImageHeight;
+
+    // Color mappings
+    struct ColorMapping {
+        int r, g, b;
+        ParticleType type;
+    };
+
+    std::vector<ColorMapping> colorMap = {
+        // Sand variants
+        {255, 200, 100, ParticleType::SAND},
+        {194, 178, 128, ParticleType::SAND},  // Tan sand
+
+        // Water variants - multiple blues
+        {50, 100, 255, ParticleType::WATER},
+        {0, 0, 255, ParticleType::WATER},      // Pure blue
+        {0, 100, 255, ParticleType::WATER},    // Azure
+        {50, 150, 255, ParticleType::WATER},   // Light blue
+        {64, 164, 223, ParticleType::WATER},   // Sky blue
+
+        // Rock
+        {128, 128, 128, ParticleType::ROCK},
+        {100, 100, 100, ParticleType::ROCK},   // Darker gray
+        {150, 150, 150, ParticleType::ROCK},   // Lighter gray
+
+        // Lava
+        {255, 100, 0, ParticleType::LAVA},
+        {255, 69, 0, ParticleType::LAVA},      // Orange-red
+
+        // Steam
+        {240, 240, 240, ParticleType::STEAM},
+        {255, 255, 255, ParticleType::STEAM},  // Pure white
+
+        // Obsidian
+        {30, 20, 40, ParticleType::OBSIDIAN},
+
+        // Fire
+        {255, 50, 0, ParticleType::FIRE},
+        {255, 0, 0, ParticleType::FIRE},       // Pure red
+
+        // Ice
+        {200, 230, 255, ParticleType::ICE},
+
+        // Glass
+        {100, 180, 180, ParticleType::GLASS},
+        {0, 255, 255, ParticleType::GLASS},    // Cyan
+
+        // Wood
+        {139, 90, 43, ParticleType::WOOD},
+        {139, 69, 19, ParticleType::WOOD},      // Saddle brown
+
+        // Moss
+        {0, 150, 0, ParticleType::MOSS},
+        {20, 130, 20, ParticleType::MOSS}
+    };
+
+    auto colorDistance = [](int r1, int g1, int b1, int r2, int g2, int b2) {
+        return (r1 - r2) * (r1 - r2) + (g1 - g2) * (g1 - g2) + (b1 - b2) * (b1 - b2);
+    };
+
+    // Threshold for color matching - reject blended/anti-aliased pixels
+    int threshold = 3500;
+    int particlesLoaded = 0;
+
+    for (int localY = 0; localY < WorldChunk::CHUNK_SIZE; localY++) {
+        for (int localX = 0; localX < WorldChunk::CHUNK_SIZE; localX++) {
+            int worldX = chunkWorldX + localX;
+            int worldY = chunkWorldY + localY;
+
+            // Convert world Y to image Y (image starts at bottom-left)
+            int imageX = worldX;  // Image X=0 is world X=0
+            int imageY = worldY - imageBaseY;  // Offset by image base
+
+            // Check if this position is within the image bounds
+            if (imageX < 0 || imageX >= sceneImageWidth || imageY < 0 || imageY >= sceneImageHeight) {
+                continue;
+            }
+
+            int pixelIdx = (imageY * sceneImageWidth + imageX) * 3;
+            int r = sceneImageData[pixelIdx];
+            int g = sceneImageData[pixelIdx + 1];
+            int b = sceneImageData[pixelIdx + 2];
+
+            // Skip dark pixels (empty/background) - be more aggressive
+            if (r < 30 && g < 30 && b < 30) continue;
+
+            ParticleType bestMatch = ParticleType::EMPTY;
+            int bestDist = threshold;
+
+            for (const auto& cm : colorMap) {
+                int dist = colorDistance(r, g, b, cm.r, cm.g, cm.b);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestMatch = cm.type;
+                }
+            }
+
+            if (bestMatch != ParticleType::EMPTY) {
+                // Set particle directly in chunk
+                chunk->setParticle(localX, localY, bestMatch);
+
+                // Set color
+                ParticleColor color;
+                switch (bestMatch) {
+                    case ParticleType::SAND:
+                        color = generateRandomColor(config.sand.colorR, config.sand.colorG, config.sand.colorB, config.sand.colorVariation);
+                        break;
+                    case ParticleType::WATER:
+                        color = generateRandomColor(config.water.colorR, config.water.colorG, config.water.colorB, config.water.colorVariation);
+                        break;
+                    case ParticleType::ROCK:
+                        color = generateRandomColor(config.rock.colorR, config.rock.colorG, config.rock.colorB, config.rock.colorVariation);
+                        break;
+                    case ParticleType::LAVA:
+                        color = generateRandomColor(config.lava.colorR, config.lava.colorG, config.lava.colorB, config.lava.colorVariation);
+                        break;
+                    case ParticleType::STEAM:
+                        color = generateRandomColor(config.steam.colorR, config.steam.colorG, config.steam.colorB, config.steam.colorVariation);
+                        break;
+                    case ParticleType::FIRE:
+                        color = generateRandomColor(config.fire.colorR, config.fire.colorG, config.fire.colorB, config.fire.colorVariation);
+                        break;
+                    case ParticleType::ICE:
+                        color = generateRandomColor(config.ice.colorR, config.ice.colorG, config.ice.colorB, config.ice.colorVariation);
+                        break;
+                    case ParticleType::GLASS:
+                        color = generateRandomColor(config.glass.colorR, config.glass.colorG, config.glass.colorB, config.glass.colorVariation);
+                        break;
+                    case ParticleType::WOOD:
+                        color = generateRandomColor(config.wood.colorR, config.wood.colorG, config.wood.colorB, config.wood.colorVariation);
+                        break;
+                    case ParticleType::OBSIDIAN:
+                        color = generateRandomColor(config.obsidian.colorR, config.obsidian.colorG, config.obsidian.colorB, config.obsidian.colorVariation);
+                        break;
+                    case ParticleType::MOSS:
+                        color = generateRandomColor(config.moss.colorR, config.moss.colorG, config.moss.colorB, config.moss.colorVariation);
+                        break;
+                    default:
+                        color = {128, 128, 128};
+                }
+                chunk->setColor(localX, localY, color);
+
+                // Mark as settled so physics colliders work
+                chunk->setSettled(localX, localY, true);
+
+                particlesLoaded++;
+            }
+        }
+    }
+
+    if (particlesLoaded > 0) {
+        chunk->setActive(true);
+        chunk->setSleeping(false);
+    }
+}
+
+const WorldChunk* World::getChunk(int chunkX, int chunkY) const {
+    if (chunkX < 0 || chunkX >= WORLD_CHUNKS_X || chunkY < 0 || chunkY >= WORLD_CHUNKS_Y) {
+        return nullptr;
+    }
+
+    ChunkKey key{chunkX, chunkY};
+    auto it = chunks.find(key);
+    if (it != chunks.end()) {
+        return it->second.get();
+    }
+    return nullptr;
+}
+
+WorldChunk* World::getChunkAtWorldPos(int worldX, int worldY) {
+    int chunkX, chunkY;
+    worldToChunk(worldX, worldY, chunkX, chunkY);
+    return getChunk(chunkX, chunkY);
+}
+
+const WorldChunk* World::getChunkAtWorldPos(int worldX, int worldY) const {
+    int chunkX, chunkY;
+    worldToChunk(worldX, worldY, chunkX, chunkY);
+    return getChunk(chunkX, chunkY);
+}
+
+ParticleType World::getParticle(int worldX, int worldY) const {
+    if (!inWorldBounds(worldX, worldY)) return ParticleType::EMPTY;
+
+    const WorldChunk* chunk = getChunkAtWorldPos(worldX, worldY);
+    if (!chunk) return ParticleType::EMPTY;
+
+    int localX, localY;
+    worldToLocal(worldX, worldY, localX, localY);
+    return chunk->getParticle(localX, localY);
+}
+
+void World::setParticle(int worldX, int worldY, ParticleType type) {
+    if (!inWorldBounds(worldX, worldY)) return;
+
+    WorldChunk* chunk = getChunkAtWorldPos(worldX, worldY);
+    if (!chunk) return;
+
+    int localX, localY;
+    worldToLocal(worldX, worldY, localX, localY);
+    chunk->setParticle(localX, localY, type);
+}
+
+ParticleColor World::getColor(int worldX, int worldY) const {
+    if (!inWorldBounds(worldX, worldY)) return {0, 0, 0};
+
+    const WorldChunk* chunk = getChunkAtWorldPos(worldX, worldY);
+    if (!chunk) return {0, 0, 0};
+
+    int localX, localY;
+    worldToLocal(worldX, worldY, localX, localY);
+    return chunk->getColor(localX, localY);
+}
+
+void World::setColor(int worldX, int worldY, ParticleColor color) {
+    if (!inWorldBounds(worldX, worldY)) return;
+
+    WorldChunk* chunk = getChunkAtWorldPos(worldX, worldY);
+    if (!chunk) return;
+
+    int localX, localY;
+    worldToLocal(worldX, worldY, localX, localY);
+    chunk->setColor(localX, localY, color);
+}
+
+bool World::isOccupied(int worldX, int worldY) const {
+    return getParticle(worldX, worldY) != ParticleType::EMPTY;
+}
+
+ParticleColor World::generateRandomColor(int baseR, int baseG, int baseB, int variation) {
+    int r = baseR + (std::rand() % (variation * 2 + 1)) - variation;
+    int g = baseG + (std::rand() % (variation * 2 + 1)) - variation;
+    int b = baseB + (std::rand() % (variation * 2 + 1)) - variation;
+    return {
+        static_cast<unsigned char>(std::max(0, std::min(255, r))),
+        static_cast<unsigned char>(std::max(0, std::min(255, g))),
+        static_cast<unsigned char>(std::max(0, std::min(255, b)))
+    };
+}
+
+void World::spawnParticleAt(int worldX, int worldY, ParticleType type) {
+    if (!inWorldBounds(worldX, worldY)) return;
+    if (isOccupied(worldX, worldY)) return;
+
+    WorldChunk* chunk = getChunkAtWorldPos(worldX, worldY);
+    if (!chunk) return;
+
+    int localX, localY;
+    worldToLocal(worldX, worldY, localX, localY);
+
+    chunk->setParticle(localX, localY, type);
+
+    // Set color based on type
+    ParticleColor color;
+    switch (type) {
+        case ParticleType::SAND:
+            color = generateRandomColor(config.sand.colorR, config.sand.colorG, config.sand.colorB, config.sand.colorVariation);
+            break;
+        case ParticleType::WATER:
+            color = generateRandomColor(config.water.colorR, config.water.colorG, config.water.colorB, config.water.colorVariation);
+            break;
+        case ParticleType::ROCK:
+            color = generateRandomColor(config.rock.colorR, config.rock.colorG, config.rock.colorB, config.rock.colorVariation);
+            break;
+        case ParticleType::LAVA:
+            color = generateRandomColor(config.lava.colorR, config.lava.colorG, config.lava.colorB, config.lava.colorVariation);
+            break;
+        case ParticleType::STEAM:
+            color = generateRandomColor(config.steam.colorR, config.steam.colorG, config.steam.colorB, config.steam.colorVariation);
+            break;
+        case ParticleType::FIRE:
+            color = generateRandomColor(config.fire.colorR, config.fire.colorG, config.fire.colorB, config.fire.colorVariation);
+            break;
+        case ParticleType::ICE:
+            color = generateRandomColor(config.ice.colorR, config.ice.colorG, config.ice.colorB, config.ice.colorVariation);
+            break;
+        case ParticleType::GLASS:
+            color = generateRandomColor(config.glass.colorR, config.glass.colorG, config.glass.colorB, config.glass.colorVariation);
+            break;
+        case ParticleType::WOOD:
+            color = generateRandomColor(config.wood.colorR, config.wood.colorG, config.wood.colorB, config.wood.colorVariation);
+            break;
+        case ParticleType::OBSIDIAN:
+            color = generateRandomColor(config.obsidian.colorR, config.obsidian.colorG, config.obsidian.colorB, config.obsidian.colorVariation);
+            break;
+        case ParticleType::MOSS:
+            color = generateRandomColor(config.moss.colorR, config.moss.colorG, config.moss.colorB, config.moss.colorVariation);
+            break;
+        default:
+            color = {128, 128, 128};
+    }
+    chunk->setColor(localX, localY, color);
+
+    // Wake chunk
+    chunk->setSleeping(false);
+    chunk->setActive(true);
+    chunk->resetStableFrames();
+}
+
+void World::loadChunksAroundCamera() {
+    int centerChunkX = (int)(camera.x + camera.viewportWidth / 2) / WorldChunk::CHUNK_SIZE;
+    int centerChunkY = (int)(camera.y + camera.viewportHeight / 2) / WorldChunk::CHUNK_SIZE;
+
+    // Load chunks within radius
+    for (int dy = -LOAD_RADIUS; dy <= LOAD_RADIUS; dy++) {
+        for (int dx = -LOAD_RADIUS; dx <= LOAD_RADIUS; dx++) {
+            int cx = centerChunkX + dx;
+            int cy = centerChunkY + dy;
+
+            if (cx >= 0 && cx < WORLD_CHUNKS_X && cy >= 0 && cy < WORLD_CHUNKS_Y) {
+                getChunk(cx, cy);  // Creates chunk if not exists
+            }
+        }
+    }
+}
+
+void World::unloadDistantChunks() {
+    int centerChunkX = (int)(camera.x + camera.viewportWidth / 2) / WorldChunk::CHUNK_SIZE;
+    int centerChunkY = (int)(camera.y + camera.viewportHeight / 2) / WorldChunk::CHUNK_SIZE;
+
+    // Find chunks to unload
+    std::vector<ChunkKey> toRemove;
+
+    for (auto& [key, chunk] : chunks) {
+        int distX = std::abs(key.x - centerChunkX);
+        int distY = std::abs(key.y - centerChunkY);
+
+        // Unload if far from camera and empty
+        if (distX > LOAD_RADIUS + 2 || distY > LOAD_RADIUS + 2) {
+            if (chunk->isEmpty()) {
+                toRemove.push_back(key);
+            }
+        }
+    }
+
+    for (const auto& key : toRemove) {
+        chunks.erase(key);
+    }
+}
+
+void World::getVisibleRegion(int& startX, int& startY, int& endX, int& endY) const {
+    startX = (int)camera.x;
+    startY = (int)camera.y;
+    endX = startX + camera.viewportWidth;
+    endY = startY + camera.viewportHeight;
+
+    // Clamp to world bounds
+    startX = std::max(0, startX);
+    startY = std::max(0, startY);
+    endX = std::min(WORLD_WIDTH, endX);
+    endY = std::min(WORLD_HEIGHT, endY);
+}
+
+bool World::canMoveTo(int worldX, int worldY) const {
+    if (!inWorldBounds(worldX, worldY)) return false;
+    return !isOccupied(worldX, worldY);
+}
+
+void World::moveParticle(int fromX, int fromY, int toX, int toY) {
+    if (!inWorldBounds(fromX, fromY) || !inWorldBounds(toX, toY)) return;
+
+    WorldChunk* fromChunk = getChunkAtWorldPos(fromX, fromY);
+    WorldChunk* toChunk = getChunkAtWorldPos(toX, toY);
+
+    if (!fromChunk || !toChunk) return;
+
+    int fromLocalX, fromLocalY, toLocalX, toLocalY;
+    worldToLocal(fromX, fromY, fromLocalX, fromLocalY);
+    worldToLocal(toX, toY, toLocalX, toLocalY);
+
+    // Copy particle data
+    ParticleType type = fromChunk->getParticle(fromLocalX, fromLocalY);
+    ParticleColor color = fromChunk->getColor(fromLocalX, fromLocalY);
+    ParticleVelocity vel = fromChunk->getVelocity(fromLocalX, fromLocalY);
+    float temp = fromChunk->getTemperature(fromLocalX, fromLocalY);
+
+    // Clear source
+    fromChunk->setParticle(fromLocalX, fromLocalY, ParticleType::EMPTY);
+    fromChunk->setColor(fromLocalX, fromLocalY, {0, 0, 0});
+    fromChunk->setVelocity(fromLocalX, fromLocalY, {0, 0});
+
+    // Set destination
+    toChunk->setParticle(toLocalX, toLocalY, type);
+    toChunk->setColor(toLocalX, toLocalY, color);
+    toChunk->setVelocity(toLocalX, toLocalY, vel);
+    toChunk->setTemperature(toLocalX, toLocalY, temp);
+    toChunk->setSettled(toLocalX, toLocalY, false);  // Moving particles are not settled
+    toChunk->setMovedThisFrame(toLocalX, toLocalY, true);
+
+    // Wake both chunks
+    wakeChunkAtWorldPos(fromX, fromY);
+    wakeChunkAtWorldPos(toX, toY);
+}
+
+void World::swapParticles(int x1, int y1, int x2, int y2) {
+    if (!inWorldBounds(x1, y1) || !inWorldBounds(x2, y2)) return;
+
+    WorldChunk* chunk1 = getChunkAtWorldPos(x1, y1);
+    WorldChunk* chunk2 = getChunkAtWorldPos(x2, y2);
+
+    if (!chunk1 || !chunk2) return;
+
+    int local1X, local1Y, local2X, local2Y;
+    worldToLocal(x1, y1, local1X, local1Y);
+    worldToLocal(x2, y2, local2X, local2Y);
+
+    // Get data from both
+    ParticleType type1 = chunk1->getParticle(local1X, local1Y);
+    ParticleColor color1 = chunk1->getColor(local1X, local1Y);
+    ParticleVelocity vel1 = chunk1->getVelocity(local1X, local1Y);
+
+    ParticleType type2 = chunk2->getParticle(local2X, local2Y);
+    ParticleColor color2 = chunk2->getColor(local2X, local2Y);
+    ParticleVelocity vel2 = chunk2->getVelocity(local2X, local2Y);
+
+    // Swap
+    chunk1->setParticle(local1X, local1Y, type2);
+    chunk1->setColor(local1X, local1Y, color2);
+    chunk1->setVelocity(local1X, local1Y, vel2);
+    chunk1->setMovedThisFrame(local1X, local1Y, true);
+
+    chunk2->setParticle(local2X, local2Y, type1);
+    chunk2->setColor(local2X, local2Y, color1);
+    chunk2->setVelocity(local2X, local2Y, vel1);
+    chunk2->setMovedThisFrame(local2X, local2Y, true);
+
+    // Wake both chunks
+    wakeChunkAtWorldPos(x1, y1);
+    wakeChunkAtWorldPos(x2, y2);
+}
+
+void World::wakeChunkAtWorldPos(int worldX, int worldY) {
+    WorldChunk* chunk = getChunkAtWorldPos(worldX, worldY);
+    if (chunk) {
+        chunk->setSleeping(false);
+        chunk->setActive(true);
+        chunk->resetStableFrames();
+    }
+}
+
+// Helper to mark a particle as settled
+void World::markSettled(int x, int y, bool settled) {
+    WorldChunk* chunk = getChunkAtWorldPos(x, y);
+    if (!chunk) return;
+    int localX, localY;
+    worldToLocal(x, y, localX, localY);
+    chunk->setSettled(localX, localY, settled);
+}
+
+// Particle physics
+void World::updateSandParticle(int x, int y) {
+    if (y + 1 >= WORLD_HEIGHT) {
+        markSettled(x, y, true);
+        return;
+    }
+
+    // 1. Fall straight down
+    ParticleType below = getParticle(x, y + 1);
+    if (below == ParticleType::EMPTY) {
+        moveParticle(x, y, x, y + 1);
+        return;
+    }
+    if (below == ParticleType::WATER) {
+        swapParticles(x, y, x, y + 1);
+        return;
+    }
+
+    // 2. Diagonal falling
+    bool leftOpen = (x > 0 && (getParticle(x - 1, y + 1) == ParticleType::EMPTY || getParticle(x - 1, y + 1) == ParticleType::WATER));
+    bool rightOpen = (x < WORLD_WIDTH - 1 && (getParticle(x + 1, y + 1) == ParticleType::EMPTY || getParticle(x + 1, y + 1) == ParticleType::WATER));
+
+    if (leftOpen && rightOpen) {
+        int newX = (std::rand() % 2) ? x - 1 : x + 1;
+        if (getParticle(newX, y + 1) == ParticleType::EMPTY) {
+            moveParticle(x, y, newX, y + 1);
+        } else {
+            swapParticles(x, y, newX, y + 1);
+        }
+    } else if (leftOpen) {
+        if (getParticle(x - 1, y + 1) == ParticleType::EMPTY) {
+            moveParticle(x, y, x - 1, y + 1);
+        } else {
+            swapParticles(x, y, x - 1, y + 1);
+        }
+    } else if (rightOpen) {
+        if (getParticle(x + 1, y + 1) == ParticleType::EMPTY) {
+            moveParticle(x, y, x + 1, y + 1);
+        } else {
+            swapParticles(x, y, x + 1, y + 1);
+        }
+    } else {
+        // Can't move - mark as settled
+        markSettled(x, y, true);
+    }
+}
+
+void World::updateWaterParticle(int x, int y) {
+    // Fall straight down
+    if (y + 1 < WORLD_HEIGHT && !isOccupied(x, y + 1)) {
+        moveParticle(x, y, x, y + 1);
+        return;
+    }
+
+    // Diagonal falling
+    bool leftDiag = (x > 0 && y + 1 < WORLD_HEIGHT && !isOccupied(x - 1, y + 1));
+    bool rightDiag = (x < WORLD_WIDTH - 1 && y + 1 < WORLD_HEIGHT && !isOccupied(x + 1, y + 1));
+
+    if (leftDiag && rightDiag) {
+        int newX = (std::rand() % 2) ? x - 1 : x + 1;
+        moveParticle(x, y, newX, y + 1);
+        return;
+    } else if (leftDiag) {
+        moveParticle(x, y, x - 1, y + 1);
+        return;
+    } else if (rightDiag) {
+        moveParticle(x, y, x + 1, y + 1);
+        return;
+    }
+
+    // Horizontal flow
+    int flowSpeed = config.water.horizontalFlowSpeed;
+    for (int speed = flowSpeed; speed >= 1; --speed) {
+        bool leftOpen = (x - speed >= 0) && !isOccupied(x - speed, y);
+        bool rightOpen = (x + speed < WORLD_WIDTH) && !isOccupied(x + speed, y);
+
+        if (leftOpen && rightOpen) {
+            int newX = (std::rand() % 2) ? x - speed : x + speed;
+            moveParticle(x, y, newX, y);
+            return;
+        } else if (leftOpen) {
+            moveParticle(x, y, x - speed, y);
+            return;
+        } else if (rightOpen) {
+            moveParticle(x, y, x + speed, y);
+            return;
+        }
+    }
+
+    // Can't move at all - mark as settled
+    markSettled(x, y, true);
+}
+
+void World::updateLavaParticle(int x, int y) {
+    // Similar to water but slower
+    if (y + 1 < WORLD_HEIGHT && !isOccupied(x, y + 1)) {
+        moveParticle(x, y, x, y + 1);
+        return;
+    }
+
+    // Diagonal
+    bool leftDiag = (x > 0 && y + 1 < WORLD_HEIGHT && !isOccupied(x - 1, y + 1));
+    bool rightDiag = (x < WORLD_WIDTH - 1 && y + 1 < WORLD_HEIGHT && !isOccupied(x + 1, y + 1));
+
+    if (leftDiag && rightDiag) {
+        int newX = (std::rand() % 2) ? x - 1 : x + 1;
+        moveParticle(x, y, newX, y + 1);
+        return;
+    } else if (leftDiag) {
+        moveParticle(x, y, x - 1, y + 1);
+        return;
+    } else if (rightDiag) {
+        moveParticle(x, y, x + 1, y + 1);
+        return;
+    }
+
+    // Slow horizontal flow
+    bool leftOpen = (x - 1 >= 0) && !isOccupied(x - 1, y);
+    bool rightOpen = (x + 1 < WORLD_WIDTH) && !isOccupied(x + 1, y);
+
+    if (leftOpen && rightOpen && (std::rand() % 3 == 0)) {
+        int newX = (std::rand() % 2) ? x - 1 : x + 1;
+        moveParticle(x, y, newX, y);
+        return;
+    } else if (leftOpen && (std::rand() % 3 == 0)) {
+        moveParticle(x, y, x - 1, y);
+        return;
+    } else if (rightOpen && (std::rand() % 3 == 0)) {
+        moveParticle(x, y, x + 1, y);
+        return;
+    }
+
+    // Can't move - mark as settled (lava solidifies quickly)
+    markSettled(x, y, true);
+}
+
+void World::updateSteamParticle(int x, int y) {
+    // Rise up
+    if (y > 0 && !isOccupied(x, y - 1)) {
+        moveParticle(x, y, x, y - 1);
+        return;
+    }
+
+    // Diagonal rising
+    bool leftUp = (x > 0 && y > 0 && !isOccupied(x - 1, y - 1));
+    bool rightUp = (x < WORLD_WIDTH - 1 && y > 0 && !isOccupied(x + 1, y - 1));
+
+    if (leftUp && rightUp) {
+        int newX = (std::rand() % 2) ? x - 1 : x + 1;
+        moveParticle(x, y, newX, y - 1);
+    } else if (leftUp) {
+        moveParticle(x, y, x - 1, y - 1);
+    } else if (rightUp) {
+        moveParticle(x, y, x + 1, y - 1);
+    }
+}
+
+void World::updateFireParticle(int x, int y) {
+    // Fire rises and flickers
+    if (y > 0 && !isOccupied(x, y - 1) && (std::rand() % 2 == 0)) {
+        moveParticle(x, y, x, y - 1);
+        return;
+    }
+
+    // Random sideways movement
+    if (std::rand() % 3 == 0) {
+        int dx = (std::rand() % 3) - 1;  // -1, 0, or 1
+        int newX = x + dx;
+        if (newX >= 0 && newX < WORLD_WIDTH && !isOccupied(newX, y)) {
+            moveParticle(x, y, newX, y);
+        }
+    }
+}
+
+void World::updateIceParticle(int x, int y) {
+    // Ice doesn't move (static) - always settled
+    markSettled(x, y, true);
+}
+
+void World::updateMossParticle(int x, int y) {
+    // Moss is mostly static
+    markSettled(x, y, true);
+}
+
+
+
+
+void World::updateWetnessForParticle(int x, int y) {
+    ParticleType type = getParticle(x, y);
+    if (type == ParticleType::EMPTY || type == ParticleType::WATER) {
+        return;
+    }
+
+    // Absorption
+    float currentWetness = getWetness(x, y);
+    float maxSaturation = getMaxSaturation(type);
+    if (currentWetness < maxSaturation) {
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                if (dx == 0 && dy == 0) continue;
+                int nx = x + dx;
+                int ny = y + dy;
+                if (inWorldBounds(nx, ny) && getParticle(nx, ny) == ParticleType::WATER) {
+                    float absorbAmount = config.wetnessAbsorptionRate * (maxSaturation - currentWetness);
+                    setWetness(x, y, currentWetness + absorbAmount);
+                    // For simplicity, we don't remove the water particle.
+                    // In a more complex simulation, we might.
+                }
+            }
+        }
+    }
+
+    // Spreading
+    currentWetness = getWetness(x, y);
+    if (currentWetness > config.wetnessMinimumThreshold) {
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                if (dx == 0 && dy == 0) continue;
+                int nx = x + dx;
+                int ny = y + dy;
+                if (inWorldBounds(nx, ny)) {
+                    ParticleType neighborType = getParticle(nx, ny);
+                    if (neighborType != ParticleType::EMPTY && neighborType != ParticleType::WATER) {
+                        float neighborWetness = getWetness(nx, ny);
+                        float maxNeighborSaturation = getMaxSaturation(neighborType);
+                        if (neighborWetness < maxNeighborSaturation && currentWetness > neighborWetness) {
+                            float transferAmount = (currentWetness - neighborWetness) * config.wetnessSpreadRate;
+                            setWetness(x, y, currentWetness - transferAmount);
+                            setWetness(nx, ny, neighborWetness + transferAmount);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void World::updateParticle(int worldX, int worldY) {
+    ParticleType type = getParticle(worldX, worldY);
+
+    switch (type) {
+        case ParticleType::SAND:
+            updateSandParticle(worldX, worldY);
+            break;
+        case ParticleType::WATER:
+            updateWaterParticle(worldX, worldY);
+            break;
+        case ParticleType::LAVA:
+            updateLavaParticle(worldX, worldY);
+            break;
+        case ParticleType::STEAM:
+            updateSteamParticle(worldX, worldY);
+            break;
+        case ParticleType::FIRE:
+            updateFireParticle(worldX, worldY);
+            break;
+        case ParticleType::ICE:
+            updateIceParticle(worldX, worldY);
+            break;
+        case ParticleType::MOSS:
+            updateMossParticle(worldX, worldY);
+            break;
+        default:
+            break;
+    }
+}
+
+void World::updateChunk(WorldChunk* chunk, float deltaTime) {
+    if (!chunk || chunk->isSleeping()) return;
+
+    int worldStartX = chunk->getWorldX();
+    int worldStartY = chunk->getWorldY();
+
+    bool anyMoved = false;
+
+    // Clear moved flags
+    chunk->clearMovedFlags();
+
+    // First pass: Handle EXPLODING particles (special mode from explosions)
+    std::vector<std::pair<int,int>> toDelete;
+    for (int localY = 0; localY < WorldChunk::CHUNK_SIZE; localY++) {
+        for (int localX = 0; localX < WorldChunk::CHUNK_SIZE; localX++) {
+            if (!chunk->isExploding(localX, localY)) continue;
+            if (chunk->hasMovedThisFrame(localX, localY)) continue;
+
+            ParticleType type = chunk->getParticle(localX, localY);
+            if (type == ParticleType::EMPTY) {
+                chunk->setExploding(localX, localY, false);
+                continue;
+            }
+
+            int worldX = worldStartX + localX;
+            int worldY = worldStartY + localY;
+
+            ParticleVelocity vel = chunk->getVelocity(localX, localY);
+
+            // Apply gravity
+            vel.vy += 0.6f;
+
+            // Apply air resistance
+            vel.vx *= 0.98f;
+            vel.vy *= 0.98f;
+
+            // Calculate new position
+            int newX = worldX + (int)std::round(vel.vx);
+            int newY = worldY + (int)std::round(vel.vy);
+
+            // Check for out of bounds - DELETE particle
+            if (!inWorldBounds(newX, newY)) {
+                toDelete.push_back({localX, localY});
+                anyMoved = true;
+                continue;
+            }
+
+            // Check what's at the target position
+            ParticleType targetType = getParticle(newX, newY);
+
+            // Only delete if hitting immovable solid (rock, wood, obsidian, glass)
+            if (targetType == ParticleType::ROCK ||
+                targetType == ParticleType::WOOD ||
+                targetType == ParticleType::OBSIDIAN ||
+                targetType == ParticleType::GLASS) {
+                toDelete.push_back({localX, localY});
+                anyMoved = true;
+                continue;
+            }
+
+            // If target is occupied by other movable particles, swap positions
+            if (targetType != ParticleType::EMPTY) {
+                // Get target particle's data before swap
+                WorldChunk* targetChunk = getChunkAtWorldPos(newX, newY);
+                if (targetChunk) {
+                    int targetLocalX, targetLocalY;
+                    worldToLocal(newX, newY, targetLocalX, targetLocalY);
+
+                    ParticleColor targetColor = targetChunk->getColor(targetLocalX, targetLocalY);
+                    ParticleVelocity targetVel = targetChunk->getVelocity(targetLocalX, targetLocalY);
+                    bool targetExploding = targetChunk->isExploding(targetLocalX, targetLocalY);
+                    int targetAge = targetChunk->getParticleAge(targetLocalX, targetLocalY);
+
+                    // Get current particle's data
+                    ParticleType currentType = chunk->getParticle(localX, localY);
+                    ParticleColor currentColor = chunk->getColor(localX, localY);
+                    int currentAge = chunk->getParticleAge(localX, localY);
+
+                    // Swap: put target particle in our old position
+                    chunk->setParticle(localX, localY, targetType);
+                    chunk->setColor(localX, localY, targetColor);
+                    chunk->setVelocity(localX, localY, targetVel);
+                    chunk->setExploding(localX, localY, targetExploding);
+                    chunk->setParticleAge(localX, localY, targetAge);
+
+                    // Put our particle in target position
+                    targetChunk->setParticle(targetLocalX, targetLocalY, currentType);
+                    targetChunk->setColor(targetLocalX, targetLocalY, currentColor);
+                    targetChunk->setVelocity(targetLocalX, targetLocalY, vel);
+                    targetChunk->setExploding(targetLocalX, targetLocalY, true);
+                    targetChunk->setParticleAge(targetLocalX, targetLocalY, currentAge);
+
+                    // Mark both as moved
+                    chunk->setMovedThisFrame(localX, localY, true);
+                    targetChunk->setMovedThisFrame(targetLocalX, targetLocalY, true);
+
+                    anyMoved = true;
+
+                    // Check deletion timeout for the moved particle
+                    int age = currentAge + 1;
+                    targetChunk->setParticleAge(targetLocalX, targetLocalY, age);
+                    if (age >= 0) {
+                        // Use world coords for deletion tracking
+                        setParticle(newX, newY, ParticleType::EMPTY);
+                    }
+
+                    // Check if velocity is low enough to stop exploding
+                    float speed = std::sqrt(vel.vx * vel.vx + vel.vy * vel.vy);
+                    if (speed < 0.5f) {
+                        targetChunk->setExploding(targetLocalX, targetLocalY, false);
+                        targetChunk->setVelocity(targetLocalX, targetLocalY, {0, 0});
+                    }
+                }
+                continue;
+            }
+
+            // Move the particle to empty space
+            moveParticle(worldX, worldY, newX, newY);
+
+            // Update state at new position
+            WorldChunk* newChunk = getChunkAtWorldPos(newX, newY);
+            if (newChunk) {
+                int newLocalX, newLocalY;
+                worldToLocal(newX, newY, newLocalX, newLocalY);
+                newChunk->setVelocity(newLocalX, newLocalY, vel);
+                newChunk->setExploding(newLocalX, newLocalY, true);
+
+                // Increment age - delete when reaches 0 (started negative for random timeout)
+                int age = newChunk->getParticleAge(newLocalX, newLocalY) + 1;
+                newChunk->setParticleAge(newLocalX, newLocalY, age);
+                if (age >= 0) { // Delete when timeout reached (500-1000ms from explosion)
+                    toDelete.push_back({newLocalX, newLocalY});
+                }
+            }
+            anyMoved = true;
+
+            // Check if velocity is low enough to stop exploding
+            float speed = std::sqrt(vel.vx * vel.vx + vel.vy * vel.vy);
+            if (speed < 0.5f && newChunk) {
+                int newLocalX, newLocalY;
+                worldToLocal(newX, newY, newLocalX, newLocalY);
+                newChunk->setExploding(newLocalX, newLocalY, false);
+                newChunk->setVelocity(newLocalX, newLocalY, {0, 0});
+            }
+        }
+    }
+
+    // Delete exploded particles that hit solids
+    for (const auto& pos : toDelete) {
+        chunk->setParticle(pos.first, pos.second, ParticleType::EMPTY);
+        chunk->setColor(pos.first, pos.second, {0, 0, 0});
+        chunk->setVelocity(pos.first, pos.second, {0, 0});
+        chunk->setExploding(pos.first, pos.second, false);
+    }
+
+    // Second pass: Normal automaton physics (non-exploding particles)
+    for (int localY = WorldChunk::CHUNK_SIZE - 1; localY >= 0; localY--) {
+        bool leftToRight = (localY % 2 == 0);
+
+        for (int i = 0; i < WorldChunk::CHUNK_SIZE; i++) {
+            int localX = leftToRight ? i : (WorldChunk::CHUNK_SIZE - 1 - i);
+
+            if (chunk->hasMovedThisFrame(localX, localY)) continue;
+            if (chunk->isExploding(localX, localY)) continue;
+
+            ParticleType type = chunk->getParticle(localX, localY);
+            if (type == ParticleType::EMPTY) continue;
+
+            int worldX = worldStartX + localX;
+            int worldY = worldStartY + localY;
+
+            ParticleType beforeType = getParticle(worldX, worldY);
+            updateParticle(worldX, worldY);
+            ParticleType afterType = getParticle(worldX, worldY);
+
+            if (beforeType != afterType || afterType == ParticleType::EMPTY) {
+                anyMoved = true;
+            }
+        }
+    }
+
+    // Third pass: Wetness simulation
+    for (int localY = 0; localY < WorldChunk::CHUNK_SIZE; localY++) {
+        for (int localX = 0; localX < WorldChunk::CHUNK_SIZE; localX++) {
+            int worldX = worldStartX + localX;
+            int worldY = worldStartY + localY;
+            updateWetnessForParticle(worldX, worldY);
+        }
+    }
+
+    
+    // Third pass: Wetness simulation
+    for (int localY = 0; localY < WorldChunk::CHUNK_SIZE; localY++) {
+        for (int localX = 0; localX < WorldChunk::CHUNK_SIZE; localX++) {
+            int worldX = worldStartX + localX;
+            int worldY = worldStartY + localY;
+            updateWetnessForParticle(worldX, worldY);
+        }
+    }
+
+    // Update sleep state
+    if (anyMoved) {
+        chunk->resetStableFrames();
+        chunk->setSleeping(false);
+    } else {
+        chunk->incrementStableFrames();
+        if (chunk->getStableFrameCount() >= FRAMES_UNTIL_SLEEP) {
+            chunk->setSleeping(true);
+        }
+    }
+}
+
+void World::update(float deltaTime) {
+    // Load/unload chunks around camera
+    loadChunksAroundCamera();
+    unloadDistantChunks();
+
+    // Get camera center chunk
+    int centerChunkX = (int)(camera.x + camera.viewportWidth / 2) / WorldChunk::CHUNK_SIZE;
+    int centerChunkY = (int)(camera.y + camera.viewportHeight / 2) / WorldChunk::CHUNK_SIZE;
+
+    // Update chunks within simulate radius
+    for (int dy = -SIMULATE_RADIUS; dy <= SIMULATE_RADIUS; dy++) {
+        for (int dx = -SIMULATE_RADIUS; dx <= SIMULATE_RADIUS; dx++) {
+            int cx = centerChunkX + dx;
+            int cy = centerChunkY + dy;
+
+            WorldChunk* chunk = getChunk(cx, cy);
+            if (chunk) {
+                updateChunk(chunk, deltaTime);
+            }
+        }
+    }
+}
+
+bool World::loadSceneFromBMP(const std::string& filepath, int worldOffsetX, int worldOffsetY) {
+    int imgWidth, imgHeight, channels;
+    unsigned char* data = stbi_load(filepath.c_str(), &imgWidth, &imgHeight, &channels, 3);
+
+    if (!data) {
+        std::cerr << "Failed to load scene: " << filepath << std::endl;
+        return false;
+    }
+
+    std::cout << "Loading scene " << filepath << " (" << imgWidth << "x" << imgHeight << ")" << std::endl;
+
+    // Color mappings
+    struct ColorMapping {
+        int r, g, b;
+        ParticleType type;
+    };
+
+    std::vector<ColorMapping> colorMap = {
+        {255, 200, 100, ParticleType::SAND},
+        {50, 100, 255, ParticleType::WATER},
+        {128, 128, 128, ParticleType::ROCK},
+        {255, 100, 0, ParticleType::LAVA},
+        {240, 240, 240, ParticleType::STEAM},
+        {30, 20, 40, ParticleType::OBSIDIAN},
+        {255, 50, 0, ParticleType::FIRE},
+        {200, 230, 255, ParticleType::ICE},
+        {100, 180, 180, ParticleType::GLASS},
+        {139, 90, 43, ParticleType::WOOD},
+        {0, 150, 0, ParticleType::MOSS}
+    };
+
+    auto colorDistance = [](int r1, int g1, int b1, int r2, int g2, int b2) {
+        return (r1 - r2) * (r1 - r2) + (g1 - g2) * (g1 - g2) + (b1 - b2) * (b1 - b2);
+    };
+
+    int threshold = 5000;
+    int particlesLoaded = 0;
+
+    for (int iy = 0; iy < imgHeight; iy++) {
+        for (int ix = 0; ix < imgWidth; ix++) {
+            int worldX = worldOffsetX + ix;
+            int worldY = worldOffsetY + iy;
+
+            if (!inWorldBounds(worldX, worldY)) continue;
+
+            int pixelIdx = (iy * imgWidth + ix) * 3;
+            int r = data[pixelIdx];
+            int g = data[pixelIdx + 1];
+            int b = data[pixelIdx + 2];
+
+            if (r < 10 && g < 10 && b < 10) continue;
+
+            ParticleType bestMatch = ParticleType::EMPTY;
+            int bestDist = threshold;
+
+            for (const auto& cm : colorMap) {
+                int dist = colorDistance(r, g, b, cm.r, cm.g, cm.b);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestMatch = cm.type;
+                }
+            }
+
+            if (bestMatch != ParticleType::EMPTY) {
+                spawnParticleAt(worldX, worldY, bestMatch);
+                particlesLoaded++;
+            }
+        }
+    }
+
+    stbi_image_free(data);
+    std::cout << "Loaded " << particlesLoaded << " particles from scene" << std::endl;
+    return true;
+}
+
+int World::getParticleCount(ParticleType type) const {
+    int count = 0;
+    for (const auto& [key, chunk] : chunks) {
+        if (!chunk) continue;
+
+        const auto& particles = chunk->getParticleGrid();
+        for (const auto& p : particles) {
+            if (p == type) count++;
+        }
+    }
+    return count;
+}
+
+void World::addSceneObject(std::shared_ptr<SceneObject> obj) {
+    if (obj) {
+        sceneObjects.push_back(obj);
+    }
+}
+
+void World::removeSceneObject(SceneObject* obj) {
+    sceneObjects.erase(
+        std::remove_if(sceneObjects.begin(), sceneObjects.end(),
+            [obj](const std::shared_ptr<SceneObject>& o) { return o.get() == obj; }),
+        sceneObjects.end()
+    );
+}
+
+bool World::isBlockedBySceneObject(int worldX, int worldY) const {
+    for (const auto& obj : sceneObjects) {
+        if (!obj || !obj->isActive() || !obj->blocksParticles()) continue;
+        if (obj->isPixelSolidAt(worldX, worldY)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+float World::getParticleMass(ParticleType type) const {
+    switch (type) {
+        case ParticleType::SAND:     return config.sand.mass;      // 2.0
+        case ParticleType::WATER:    return config.water.mass;     // 1.0
+        case ParticleType::ROCK:     return config.rock.mass;      // 5.0
+        case ParticleType::WOOD:     return config.wood.mass;      // 0.6
+        case ParticleType::LAVA:     return config.lava.mass;      // 2.5
+        case ParticleType::STEAM:    return config.steam.mass;     // -1.0 (rises)
+        case ParticleType::OBSIDIAN: return config.obsidian.mass;  // 6.0
+        case ParticleType::FIRE:     return config.fire.mass;      // -0.3 (rises)
+        case ParticleType::ICE:      return config.ice.mass;       // 0.9
+        case ParticleType::GLASS:    return config.glass.mass;     // 2.5
+        default: return 1.0f;
+    }
+}
+
+void World::explodeAt(int worldX, int worldY, int radius, float force) {
+    // Set velocity on all particles in radius - physics system will move them
+    for (int dy = -radius; dy <= radius; dy++) {
+        for (int dx = -radius; dx <= radius; dx++) {
+            int px = worldX + dx;
+            int py = worldY + dy;
+
+            if (!inWorldBounds(px, py)) continue;
+
+            float dist = std::sqrt((float)(dx * dx + dy * dy));
+            if (dist > radius) continue;
+
+            WorldChunk* chunk = getChunkAtWorldPos(px, py);
+            if (!chunk) continue;
+
+            int localX, localY;
+            worldToLocal(px, py, localX, localY);
+
+            ParticleType type = chunk->getParticle(localX, localY);
+            if (type == ParticleType::EMPTY) continue;
+
+            // Skip completely immovable particles
+            if (type == ParticleType::OBSIDIAN) continue;
+
+            // Get mass - lighter particles fly further
+            float mass = std::abs(getParticleMass(type));
+            if (mass < 0.1f) mass = 0.1f; // Prevent division issues
+
+            // Mass multiplier: lighter = higher multiplier, heavy = much lower
+            // Use squared inverse for heavier materials to make them barely move
+            float massMultiplier;
+            if (mass <= 1.0f) {
+                // Light materials: linear inverse (mass 0.3 -> 3.3x, mass 1.0 -> 1x)
+                massMultiplier = 1.0f / mass;
+            } else {
+                // Heavy materials: squared inverse (mass 2 -> 0.25x, mass 5 -> 0.04x)
+                massMultiplier = 1.0f / (mass * mass);
+            }
+
+            // Calculate outward velocity - stronger near center
+            float falloff = 1.0f - (dist / (float)radius);
+            falloff = falloff * falloff; // Quadratic falloff
+
+            float dirX = (dist > 0.1f) ? dx / dist : 0.0f;
+            float dirY = (dist > 0.1f) ? dy / dist : -1.0f;
+
+            // Add randomness
+            float randAngle = ((std::rand() % 100) - 50) / 100.0f * 0.6f;
+            float cosA = std::cos(randAngle);
+            float sinA = std::sin(randAngle);
+            float newDirX = dirX * cosA - dirY * sinA;
+            float newDirY = dirX * sinA + dirY * cosA;
+
+            float randForce = 0.7f + ((std::rand() % 60) / 100.0f);
+
+            // Set velocity - scaled by inverse mass (lighter = faster)
+            ParticleVelocity vel;
+            vel.vx = newDirX * force * falloff * randForce * massMultiplier;
+            vel.vy = newDirY * force * falloff * randForce * massMultiplier;
+
+            chunk->setVelocity(localX, localY, vel);
+            chunk->setExploding(localX, localY, true);  // Set exploding mode
+            // Random timeout: -60 to -30 frames = 500-1000ms at 60fps, deleted when age >= 0
+            chunk->setParticleAge(localX, localY, -(30 + (std::rand() % 31)));
+
+            // Wake chunk
+            chunk->setSleeping(false);
+            chunk->setActive(true);
+            chunk->resetStableFrames();
+        }
+    }
+}
+
+bool World::isSolidParticle(ParticleType type) const {
+    return type == ParticleType::ROCK ||
+           type == ParticleType::WOOD ||
+           type == ParticleType::OBSIDIAN ||
+           type == ParticleType::GLASS ||
+           type == ParticleType::ICE ||
+           type == ParticleType::MOSS;
+}
+
+float World::getWetness(int worldX, int worldY) const {
+    if (!inWorldBounds(worldX, worldY)) return 0.0f;
+    const WorldChunk* chunk = getChunkAtWorldPos(worldX, worldY);
+    if (!chunk) return 0.0f;
+    int localX, localY;
+    worldToLocal(worldX, worldY, localX, localY);
+    return chunk->getWetness(localX, localY);
+}
+
+void World::setWetness(int worldX, int worldY, float wetness) {
+    if (!inWorldBounds(worldX, worldY)) return;
+    WorldChunk* chunk = getChunkAtWorldPos(worldX, worldY);
+    if (!chunk) return;
+    int localX, localY;
+    worldToLocal(worldX, worldY, localX, localY);
+    chunk->setWetness(localX, localY, wetness);
+}
+
+float World::getMaxSaturation(ParticleType type) const {
+    switch (type) {
+        case ParticleType::SAND: return config.sand.maxSaturation;
+        case ParticleType::WOOD: return config.wood.maxSaturation;
+        case ParticleType::MOSS: return config.moss.maxSaturation;
+        default: return 0.0f;
+    }
+}
+
+
+bool World::checkCapsuleCollision(float centerX, float centerY, float radius, float height) const {
+    // Capsule is two semicircles connected by a rectangle
+    // Sample points along the capsule perimeter to check for solid particles
+
+    float halfBodyHeight = (height - 2 * radius) / 2.0f;
+    float topCircleY = centerY - halfBodyHeight;
+    float botCircleY = centerY + halfBodyHeight;
+
+    // Check points along the capsule perimeter
+    // Top semicircle
+    for (int angle = 0; angle <= 180; angle += 15) {
+        float rad = angle * 3.14159f / 180.0f;
+        int px = (int)(centerX + std::cos(rad) * radius);
+        int py = (int)(topCircleY - std::sin(rad) * radius);
+        if (inWorldBounds(px, py) && isSolidParticle(getParticle(px, py))) {
+            return true;
+        }
+    }
+
+    // Bottom semicircle
+    for (int angle = 0; angle <= 180; angle += 15) {
+        float rad = angle * 3.14159f / 180.0f;
+        int px = (int)(centerX + std::cos(rad) * radius);
+        int py = (int)(botCircleY + std::sin(rad) * radius);
+        if (inWorldBounds(px, py) && isSolidParticle(getParticle(px, py))) {
+            return true;
+        }
+    }
+
+    // Left and right edges of the body
+    for (float y = topCircleY; y <= botCircleY; y += 2.0f) {
+        int leftX = (int)(centerX - radius);
+        int rightX = (int)(centerX + radius);
+        int py = (int)y;
+
+        if (inWorldBounds(leftX, py) && isSolidParticle(getParticle(leftX, py))) {
+            return true;
+        }
+        if (inWorldBounds(rightX, py) && isSolidParticle(getParticle(rightX, py))) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void World::procedurallyGenerateInnerRocks(WorldChunk* chunk) {
+    if (!chunk) return;
+
+    int chunkWorldX = chunk->getWorldX();
+    int chunkWorldY = chunk->getWorldY();
+
+    for (int y = 0; y < WorldChunk::CHUNK_SIZE; ++y) {
+        for (int x = 0; x < WorldChunk::CHUNK_SIZE; ++x) {
+            int worldX = chunkWorldX + x;
+            int worldY = chunkWorldY + y;
+
+            ParticleType type = getParticle(worldX, worldY);
+            if (type == ParticleType::ROCK || type == ParticleType::OBSIDIAN) {
+                const auto& typeConfig = (type == ParticleType::ROCK) ? config.rock : config.obsidian;
+                if (typeConfig.innerRockSpawnChance > 0 && std::rand() % typeConfig.innerRockSpawnChance < 1) {
+                    int patch_size = typeConfig.innerRockMinSize + std::rand() % (typeConfig.innerRockMaxSize - typeConfig.innerRockMinSize + 1);
+                    float patch_radius = typeConfig.innerRockMinRadius + (float)(std::rand()) / (float)(RAND_MAX / (typeConfig.innerRockMaxRadius - typeConfig.innerRockMinRadius));
+
+                    for (int dy = -patch_size / 2; dy <= patch_size / 2; ++dy) {
+                        for (int dx = -patch_size / 2; dx <= patch_size / 2; ++dx) {
+                            if (dx * dx + dy * dy <= patch_radius * patch_radius) {
+                                int currentX = worldX + dx;
+                                int currentY = worldY + dy;
+
+                                if (inWorldBounds(currentX, currentY) && getParticle(currentX, currentY) == type) {
+                                    ParticleColor color = getColor(currentX, currentY);
+                                    setColor(currentX, currentY, {static_cast<unsigned char>(color.r * typeConfig.innerRockDarkness), static_cast<unsigned char>(color.g * typeConfig.innerRockDarkness), static_cast<unsigned char>(color.b * typeConfig.innerRockDarkness)});
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+void World::procedurallyGenerateMoss(WorldChunk* chunk) {
+    if (!chunk) return;
+
+    // A time limit for generation to stop after a few seconds from the start of the program
+    static std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+    if (std::chrono::steady_clock::now() - start_time > std::chrono::seconds(2)) {
+        return;
+    }
+
+    int chunkWorldX = chunk->getWorldX();
+    int chunkWorldY = chunk->getWorldY();
+
+    for (int y = 0; y < WorldChunk::CHUNK_SIZE; ++y) {
+        for (int x = 0; x < WorldChunk::CHUNK_SIZE; ++x) {
+            int worldX = chunkWorldX + x;
+            int worldY = chunkWorldY + y;
+
+            if (getParticle(worldX, worldY) == ParticleType::ROCK && getParticle(worldX, worldY - 1) == ParticleType::EMPTY) {
+                if (std::rand() % 10 < 1) { 
+                    int width = 2 + std::rand() % 8;
+                    int depth = 1 + std::rand() % 4;
+
+                    for (int py = -1; py < depth; ++py) {
+                        for (int px = -width / 2; px < width / 2; ++px) {
+                            int mossX = worldX + px;
+                            int mossY = worldY + py;
+
+                            if (inWorldBounds(mossX, mossY)) {
+                                ParticleType existingParticle = getParticle(mossX, mossY);
+                                if (existingParticle == ParticleType::ROCK) {
+                                    setParticle(mossX, mossY, ParticleType::MOSS);
+                                    setColor(mossX, mossY, generateRandomColor(config.moss.colorR, config.moss.colorG, config.moss.colorB, config.moss.colorVariation));
+                                } else if (existingParticle == ParticleType::EMPTY) {
+                                    ParticleType particleBelow = getParticle(mossX, mossY + 1);
+                                    if (particleBelow == ParticleType::ROCK || particleBelow == ParticleType::MOSS) {
+                                        setParticle(mossX, mossY, ParticleType::MOSS);
+                                        setColor(mossX, mossY, generateRandomColor(config.moss.colorR, config.moss.colorG, config.moss.colorB, config.moss.colorVariation));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

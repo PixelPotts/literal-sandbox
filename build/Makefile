@@ -177,6 +177,102 @@ src/SandSimulator.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/SandSimulator.cpp.s
 .PHONY : src/SandSimulator.cpp.s
 
+src/SceneObject.o: src/SceneObject.cpp.o
+.PHONY : src/SceneObject.o
+
+# target to build an object file
+src/SceneObject.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o
+.PHONY : src/SceneObject.cpp.o
+
+src/SceneObject.i: src/SceneObject.cpp.i
+.PHONY : src/SceneObject.i
+
+# target to preprocess a source file
+src/SceneObject.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.i
+.PHONY : src/SceneObject.cpp.i
+
+src/SceneObject.s: src/SceneObject.cpp.s
+.PHONY : src/SceneObject.s
+
+# target to generate assembly for a file
+src/SceneObject.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.s
+.PHONY : src/SceneObject.cpp.s
+
+src/Sprite.o: src/Sprite.cpp.o
+.PHONY : src/Sprite.o
+
+# target to build an object file
+src/Sprite.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o
+.PHONY : src/Sprite.cpp.o
+
+src/Sprite.i: src/Sprite.cpp.i
+.PHONY : src/Sprite.i
+
+# target to preprocess a source file
+src/Sprite.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Sprite.cpp.i
+.PHONY : src/Sprite.cpp.i
+
+src/Sprite.s: src/Sprite.cpp.s
+.PHONY : src/Sprite.s
+
+# target to generate assembly for a file
+src/Sprite.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Sprite.cpp.s
+.PHONY : src/Sprite.cpp.s
+
+src/World.o: src/World.cpp.o
+.PHONY : src/World.o
+
+# target to build an object file
+src/World.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/World.cpp.o
+.PHONY : src/World.cpp.o
+
+src/World.i: src/World.cpp.i
+.PHONY : src/World.i
+
+# target to preprocess a source file
+src/World.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/World.cpp.i
+.PHONY : src/World.cpp.i
+
+src/World.s: src/World.cpp.s
+.PHONY : src/World.s
+
+# target to generate assembly for a file
+src/World.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/World.cpp.s
+.PHONY : src/World.cpp.s
+
+src/WorldChunk.o: src/WorldChunk.cpp.o
+.PHONY : src/WorldChunk.o
+
+# target to build an object file
+src/WorldChunk.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.o
+.PHONY : src/WorldChunk.cpp.o
+
+src/WorldChunk.i: src/WorldChunk.cpp.i
+.PHONY : src/WorldChunk.i
+
+# target to preprocess a source file
+src/WorldChunk.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.i
+.PHONY : src/WorldChunk.cpp.i
+
+src/WorldChunk.s: src/WorldChunk.cpp.s
+.PHONY : src/WorldChunk.s
+
+# target to generate assembly for a file
+src/WorldChunk.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.s
+.PHONY : src/WorldChunk.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -201,6 +297,30 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+src/stb_image_impl.o: src/stb_image_impl.cpp.o
+.PHONY : src/stb_image_impl.o
+
+# target to build an object file
+src/stb_image_impl.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o
+.PHONY : src/stb_image_impl.cpp.o
+
+src/stb_image_impl.i: src/stb_image_impl.cpp.i
+.PHONY : src/stb_image_impl.i
+
+# target to preprocess a source file
+src/stb_image_impl.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.i
+.PHONY : src/stb_image_impl.cpp.i
+
+src/stb_image_impl.s: src/stb_image_impl.cpp.s
+.PHONY : src/stb_image_impl.s
+
+# target to generate assembly for a file
+src/stb_image_impl.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.s
+.PHONY : src/stb_image_impl.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -216,9 +336,24 @@ help:
 	@echo "... src/SandSimulator.o"
 	@echo "... src/SandSimulator.i"
 	@echo "... src/SandSimulator.s"
+	@echo "... src/SceneObject.o"
+	@echo "... src/SceneObject.i"
+	@echo "... src/SceneObject.s"
+	@echo "... src/Sprite.o"
+	@echo "... src/Sprite.i"
+	@echo "... src/Sprite.s"
+	@echo "... src/World.o"
+	@echo "... src/World.i"
+	@echo "... src/World.s"
+	@echo "... src/WorldChunk.o"
+	@echo "... src/WorldChunk.i"
+	@echo "... src/WorldChunk.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/stb_image_impl.o"
+	@echo "... src/stb_image_impl.i"
+	@echo "... src/stb_image_impl.s"
 .PHONY : help
 
 

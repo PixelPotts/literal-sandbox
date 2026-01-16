@@ -81,12 +81,12 @@ clean: CMakeFiles/sand_simulator.dir/clean
 CMakeFiles/sand_simulator.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=1,2,3,4 "Built target sand_simulator"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9 "Built target sand_simulator"
 .PHONY : CMakeFiles/sand_simulator.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/sand_simulator.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles 4
+	$(CMAKE_COMMAND) -E cmake_progress_start /mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles 9
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/sand_simulator.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles 0
 .PHONY : CMakeFiles/sand_simulator.dir/rule

@@ -13,6 +13,8 @@
     -> MOVED
   TryMove (200,0) vel=(0,0.495) target=(200,0)
     -> NO MOVEMENT
+  TryMove (200,0) vel=(0,0.495) target=(200,0)
+    -> NO MOVEMENT
   TryMove (200,0) vel=(0,0.98505) target=(200,1)
     -> MOVED
   TryMove (200,1) vel=(0,0.98505) target=(200,2)
@@ -21,8 +23,12 @@
 === FRAME 3 ===
   TryMove (200,2) vel=(0,1.9505) target=(200,4)
     -> MOVED
+  TryMove (200,2) vel=(0,0.495) target=(200,2)
+    -> NO MOVEMENT
   TryMove (200,0) vel=(0,0.495) target=(200,0)
     -> NO MOVEMENT
+  TryMove (200,2) vel=(0,0.98505) target=(200,3)
+    -> MOVED
   TryMove (200,0) vel=(0,0.98505) target=(200,1)
     -> MOVED
   TryMove (200,1) vel=(0,0.98505) target=(200,2)
@@ -31,10 +37,10 @@
     -> COMPLETELY BLOCKED
 
 === FRAME 4 ===
-
-=== FRAME 5 ===
-  TryMove (200,0) vel=(0,0.495) target=(200,0)
+  TryMove (200,2) vel=(0,0.495) target=(200,2)
     -> NO MOVEMENT
+  TryMove (200,2) vel=(0,0.98505) target=(200,3)
+    -> MOVED
   TryMove (200,0) vel=(0,0.495) target=(200,0)
     -> NO MOVEMENT
   TryMove (200,0) vel=(0,0.98505) target=(200,1)
@@ -43,23 +49,55 @@
     -> MOVED
   TryMove (200,2) vel=(0,1.4702) target=(200,3)
     -> MOVED
-
-=== FRAME 6 ===
-
-=== FRAME 7 ===
-
-=== FRAME 8 ===
-  TryMove (200,2) vel=(0.58806,1.4702) target=(201,3)
-    -> MOVED
-
-=== FRAME 9 ===
-  TryMove (200,0) vel=(0,0.495) target=(200,0)
-    -> NO MOVEMENT
   TryMove (200,0) vel=(0,0.495) target=(200,0)
     -> NO MOVEMENT
   TryMove (200,0) vel=(0,0.98505) target=(200,1)
     -> MOVED
+  TryMove (200,1) vel=(0,0.98505) target=(200,2)
+    -> MOVED
+  TryMove (200,2) vel=(0,1.4702) target=(200,3)
+    -> BLOCKED, added diagonal velocity
+  TryMove (200,2) vel=(-0.4158,1.22275) target=(200,3)
+    -> BLOCKED (has horizontal velocity)
+  TryMove (200,2) vel=(-0.0864448,0.858156) target=(200,3)
+    -> BLOCKED, added diagonal velocity
 
-=== FRAME 10 ===
+=== FRAME 5 ===
+  TryMove (200,2) vel=(-0.4158,0.919787) target=(200,3)
+    -> BLOCKED (has horizontal velocity)
+  TryMove (200,0) vel=(0,0.495) target=(200,0)
+    -> NO MOVEMENT
+  TryMove (200,2) vel=(-0.0864448,0.768177) target=(200,3)
+    -> BLOCKED, added diagonal velocity
+  TryMove (200,0) vel=(0,0.98505) target=(200,1)
+    -> MOVED
+  TryMove (200,2) vel=(-0.594,0.875248) target=(199,3)
+    -> MOVED
+
+=== FRAME 6 ===
   TryMove (200,1) vel=(0,1.4702) target=(200,2)
     -> MOVED
+  TryMove (200,0) vel=(0,0.495) target=(200,0)
+    -> NO MOVEMENT
+  TryMove (200,0) vel=(0,0.98505) target=(200,1)
+    -> MOVED
+  TryMove (200,1) vel=(0,0.98505) target=(200,2)
+    -> COMPLETELY BLOCKED
+
+=== FRAME 7 ===
+  TryMove (200,2) vel=(0,1.9505) target=(200,4)
+    -> MOVED
+
+=== FRAME 8 ===
+  TryMove (200,2) vel=(-0.58806,1.4702) target=(199,3)
+    -> MOVED
+
+=== FRAME 9 ===
+
+=== FRAME 10 ===
+  TryMove (200,1) vel=(0,0.495) target=(200,1)
+    -> NO MOVEMENT
+  TryMove (200,1) vel=(0,0.98505) target=(200,2)
+    -> MOVED
+  TryMove (200,0) vel=(0,0.495) target=(200,0)
+    -> NO MOVEMENT

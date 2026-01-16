@@ -23,6 +23,11 @@ set(SOURCES
     src/main.cpp
     src/Config.cpp
     src/SandSimulator.cpp
+    src/World.cpp
+    src/WorldChunk.cpp
+    src/Sprite.cpp
+    src/SceneObject.cpp
+    src/stb_image_impl.cpp
 )
 
 # Create executable
