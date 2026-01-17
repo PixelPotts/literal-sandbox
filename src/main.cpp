@@ -320,7 +320,7 @@ int main(int argc, char* argv[]) {
     // Create player as scene object
     auto player = std::make_shared<SceneObject>();
     player->setSprite(playerSprite);
-    player->setCollider(0, 0, 11, 24);  // Keep box collider for particle blocking
+    player->setCollider(1, -10, 9, 19);  // Keep box collider for particle blocking
     player->setCapsuleCollider(5.0f, 14.0f, 5.5f, 5.0f);  // Capsule for terrain collision
     player->setBlocksParticles(true);
 
@@ -416,9 +416,10 @@ int main(int argc, char* argv[]) {
     float playerVelY = 0.0f;
     const float GRAVITY = 400.0f;        // Pixels per second squared
     const float THRUST_POWER = 600.0f;   // Upward acceleration when thrusting
-    const float MOVE_ACCEL = 300.0f;     // Horizontal acceleration
+    const float MOVE_ACCEL = 600.0f;     // Horizontal acceleration
     const float MAX_FALL_SPEED = 300.0f; // Terminal velocity
     const float AIR_FRICTION = 0.95f;    // Horizontal slowdown in air
+    const float GROUND_FRICTION = 0.9f;  // Horizontal slowdown on ground
 
     // Bullets for shooting
     std::vector<Bullet> bullets;
@@ -509,79 +510,160 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // Handle player physics (gravity, thrust, horizontal movement)
-        const auto& cap = player->getCapsule();
+                        // ==================== Player Physics ====================
 
-        // Apply gravity
-        playerVelY += GRAVITY * deltaTime;
+                        const auto& cap = player->getCapsule();
 
-        // Apply thrust (spacebar - like Noita jetpack)
-        if (thrustHeld) {
-            playerVelY -= THRUST_POWER * deltaTime;
-        }
+                        float collisionY;
 
-        // Apply horizontal acceleration
-        float dx = 0;
-        if (moveLeft) dx = -1;
-        if (moveRight) dx = 1;
+                
 
-        if (dx != 0) {
-            float accel = shiftHeld ? MOVE_ACCEL * 2.0f : MOVE_ACCEL;
-            playerVelX += dx * accel * deltaTime;
-        } else {
-            // Apply air friction when not pressing movement keys
-            playerVelX *= AIR_FRICTION;
-        }
+                        // 1. Ground Check
 
-        // Clamp velocities
-        playerVelY = std::min(playerVelY, MAX_FALL_SPEED);
-        playerVelY = std::max(playerVelY, -MAX_FALL_SPEED);  // Also limit upward speed
-        float maxHorizSpeed = shiftHeld ? 200.0f : 100.0f;
-        playerVelX = std::max(-maxHorizSpeed, std::min(playerVelX, maxHorizSpeed));
+                        bool onGround = world.checkCapsuleCollision(player->getX() + cap.offsetX, player->getY() + cap.offsetY + 1, cap.radius, cap.height, collisionY);
 
-        // Try X movement with collision
-        float moveX = playerVelX * deltaTime;
-        float newX = player->getX() + moveX;
-        float capsuleCenterX = newX + cap.offsetX;
-        float capsuleCenterY = player->getY() + cap.offsetY;
+                
 
-        if (world.checkCapsuleCollision(capsuleCenterX, capsuleCenterY, cap.radius, cap.height)) {
-            bool steppedUp = false;
-            for (int step = 1; step <= 2; ++step) {
-                if (!world.checkCapsuleCollision(capsuleCenterX, capsuleCenterY - step, cap.radius, cap.height)) {
-                    player->setPosition(newX, player->getY() - step);
-                    steppedUp = true;
-                    break;
-                }
-            }
-            if (!steppedUp) {
-                playerVelX = 0;
-            }
-        } else {
-            player->setPosition(newX, player->getY());
-        }
+                        // 2. Apply vertical forces
 
-        // Try Y movement with collision
-        float moveY = playerVelY * deltaTime;
-        float newY = player->getY() + moveY;
-        capsuleCenterX = player->getX() + cap.offsetX;
-        capsuleCenterY = newY + cap.offsetY;
+                        if (onGround) {
 
-        if (!world.checkCapsuleCollision(capsuleCenterX, capsuleCenterY, cap.radius, cap.height)) {
-            player->setPosition(player->getX(), newY);
-        } else {
-            playerVelY = 0;  // Stop vertical velocity on collision
-        }
+                            if (!thrustHeld) {
 
-        // Clamp player to world bounds
-        float px = player->getX();
-        float py = player->getY();
-        if (px < 0) { px = 0; playerVelX = 0; }
-        if (px > World::WORLD_WIDTH - 11) { px = World::WORLD_WIDTH - 11; playerVelX = 0; }
-        if (py < 0) { py = 0; playerVelY = 0; }
-        if (py > World::WORLD_HEIGHT - 24) { py = World::WORLD_HEIGHT - 24; playerVelY = 0; }
-        player->setPosition(px, py);
+                                playerVelY = 0;
 
+                            }
+
+                        } else {
+
+                            playerVelY += GRAVITY * deltaTime;
+
+                        }
+
+                        
+
+                        if (thrustHeld) {
+
+                            playerVelY -= THRUST_POWER * deltaTime;
+
+                        }
+
+                
+
+                        // 3. Horizontal forces and friction
+
+                        float dx = 0;
+
+                        if (moveLeft) dx = -1;
+
+                        if (moveRight) dx = 1;
+
+                        if (dx != 0) {
+
+                            playerVelX += dx * MOVE_ACCEL * deltaTime;
+
+                        }
+
+                        
+
+                        if (onGround) {
+
+                            playerVelX *= GROUND_FRICTION;
+
+                        } else {
+
+                            playerVelX *= AIR_FRICTION;
+
+                        }
+
+                
+
+                        // 4. Clamp velocities
+
+                        playerVelY = std::min(playerVelY, MAX_FALL_SPEED);
+
+                        playerVelY = std::max(playerVelY, -MAX_FALL_SPEED);
+
+                        float maxHorizSpeed = shiftHeld ? 200.0f : 100.0f;
+
+                        playerVelX = std::max(-maxHorizSpeed, std::min(playerVelX, maxHorizSpeed));
+
+                
+
+                        // 5. Calculate new positions
+
+                        float newX = player->getX() + playerVelX * deltaTime;
+
+                        float newY = player->getY() + playerVelY * deltaTime;
+
+                        
+
+                        // 6. Resolve Collisions
+
+                        // Y-axis first
+
+                        float capsuleCenterX = player->getX() + cap.offsetX;
+
+                        float capsuleCenterY = player->getY() + cap.offsetY;
+
+                        if (world.checkCapsuleCollision(capsuleCenterX, capsuleCenterY, cap.radius, cap.height, collisionY)) {
+
+                            if (playerVelY > 0) {
+
+                                newY = collisionY - (cap.offsetY + cap.height + cap.radius);
+
+                            }
+
+                            playerVelY = 0;
+
+                        }
+
+                
+
+                        // X-axis
+                        capsuleCenterX = newX + cap.offsetX;
+                        capsuleCenterY = player->getY() + cap.offsetY; // Use current Y for this check
+                        if (world.checkCapsuleCollision(capsuleCenterX, capsuleCenterY, cap.radius, cap.height, collisionY)) {
+                            bool steppedUp = false;
+                            if (onGround) {
+                                for (int step = 1; step <= 2; ++step) {
+                                    float dummy;
+                                    if (!world.checkCapsuleCollision(capsuleCenterX, capsuleCenterY - step, cap.radius, cap.height, dummy)) {
+                                        newY = player->getY() - step;
+                                        steppedUp = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!steppedUp) {
+                                newX = player->getX();
+                                playerVelX = 0;
+                            }
+                        }
+
+                
+
+                        // 7. Set final position
+
+                        player->setPosition(newX, newY);
+
+                        
+
+                        // 8. Clamp player to world bounds
+
+                        float px = player->getX();
+
+                        float py = player->getY();
+
+                        if (px < 0) { px = 0; playerVelX = 0; }
+
+                        if (px > World::WORLD_WIDTH - 11) { px = World::WORLD_WIDTH - 11; playerVelX = 0; }
+
+                        if (py < 0) { py = 0; playerVelY = 0; }
+
+                        if (py > World::WORLD_HEIGHT - 24) { py = World::WORLD_HEIGHT - 24; playerVelY = 0; }
+
+                        player->setPosition(px, py);
         // Camera follows player with deadzone, smooth follow, and look-ahead
         float camDirX = (playerVelX > 10) ? 1 : (playerVelX < -10 ? -1 : 0);
         float camDirY = (playerVelY > 10) ? 1 : (playerVelY < -10 ? -1 : 0);
@@ -668,7 +750,9 @@ int main(int argc, char* argv[]) {
         }
 
         // Update world simulation
-        world.update(deltaTime);
+        for (int i = 0; i < config.fallSpeed; ++i) {
+            world.update(deltaTime / config.fallSpeed);
+        }
 
         // Ensure OpenGL context is current
         if (SDL_GL_MakeCurrent(window, glContext) < 0) {
@@ -782,10 +866,84 @@ int main(int argc, char* argv[]) {
             SDL_RenderCopy(renderer, spr->getTexture(), nullptr, &dstRect);
         }
 
+        // Draw player colliders
+        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+        
+        // Draw box collider
+        const auto& p_box = player->getCollider();
+        SDL_Rect box_rect = {
+            (int)((player->getX() + p_box.x - cam.x) * scaleX),
+            (int)((player->getY() + p_box.y - cam.y) * scaleY),
+            (int)(p_box.width * scaleX),
+            (int)(p_box.height * scaleY)
+        };
+        SDL_RenderDrawRect(renderer, &box_rect);
+
+        // Draw capsule collider
+        const auto& p_cap = player->getCapsule();
+        float p_x = player->getX();
+        float p_y = player->getY();
+
+        float capsule_cx_world = p_x + p_cap.offsetX;
+        float top_circle_cy_world = p_y + p_cap.offsetY;
+        float bottom_circle_cy_world = top_circle_cy_world + p_cap.height;
+
+        // Draw top semi-circle
+        for (int angle = 0; angle <= 180; angle += 15) {
+            float rad1 = angle * M_PI / 180.0f;
+            float rad2 = (angle + 15) * M_PI / 180.0f;
+            int x1 = (int)(((capsule_cx_world + std::cos(rad1) * p_cap.radius) - cam.x) * scaleX);
+            int y1 = (int)(((top_circle_cy_world - std::sin(rad1) * p_cap.radius) - cam.y) * scaleY);
+            int x2 = (int)(((capsule_cx_world + std::cos(rad2) * p_cap.radius) - cam.x) * scaleX);
+            int y2 = (int)(((top_circle_cy_world - std::sin(rad2) * p_cap.radius) - cam.y) * scaleY);
+            SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
+        }
+
+        // Draw bottom semi-circle
+        for (int angle = 180; angle <= 360; angle += 15) {
+            float rad1 = angle * M_PI / 180.0f;
+            float rad2 = (angle + 15) * M_PI / 180.0f;
+            int x1 = (int)(((capsule_cx_world + std::cos(rad1) * p_cap.radius) - cam.x) * scaleX);
+            int y1 = (int)(((bottom_circle_cy_world - std::sin(rad1) * p_cap.radius) - cam.y) * scaleY);
+            int x2 = (int)(((capsule_cx_world + std::cos(rad2) * p_cap.radius) - cam.x) * scaleX);
+            int y2 = (int)(((bottom_circle_cy_world - std::sin(rad2) * p_cap.radius) - cam.y) * scaleY);
+            SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
+        }
+        
+        // Draw vertical lines
+        int x1_left = (int)(((capsule_cx_world - p_cap.radius) - cam.x) * scaleX);
+        int y1_left = (int)((top_circle_cy_world - cam.y) * scaleY);
+        int x2_left = (int)(((capsule_cx_world - p_cap.radius) - cam.x) * scaleX);
+        int y2_left = (int)((bottom_circle_cy_world - cam.y) * scaleY);
+        SDL_RenderDrawLine(renderer, x1_left, y1_left, x2_left, y2_left);
+
+        int x1_right = (int)(((capsule_cx_world + p_cap.radius) - cam.x) * scaleX);
+        int y1_right = (int)((top_circle_cy_world - cam.y) * scaleY);
+        int x2_right = (int)(((capsule_cx_world + p_cap.radius) - cam.x) * scaleX);
+        int y2_right = (int)((bottom_circle_cy_world - cam.y) * scaleY);
+        SDL_RenderDrawLine(renderer, x1_right, y1_right, x2_right, y2_right);
+
         // Draw UI
         drawDropdown(renderer, font, dropdown);
         drawDropdown(renderer, font, volumeDropdown);
         drawDropdown(renderer, font, fpsDropdown);
+
+        // Draw ground colliders using edge detection
+        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+        for (int y = visStartY; y < visEndY; ++y) {
+            for (int x = visStartX; x < visEndX; ++x) {
+                bool is_solid = world.isSolidParticle(world.getParticle(x, y));
+                bool up_is_solid = world.isSolidParticle(world.getParticle(x, y - 1));
+                bool left_is_solid = world.isSolidParticle(world.getParticle(x - 1, y));
+
+                if (is_solid != up_is_solid) {
+                    SDL_RenderDrawLine(renderer, (int)((x - cam.x) * scaleX), (int)((y - cam.y) * scaleY), (int)((x + 1 - cam.x) * scaleX), (int)((y - cam.y) * scaleY));
+                }
+                if (is_solid != left_is_solid) {
+                    SDL_RenderDrawLine(renderer, (int)((x - cam.x) * scaleX), (int)((y - cam.y) * scaleY), (int)((x - cam.x) * scaleX), (int)((y + 1 - cam.y) * scaleY));
+                }
+            }
+        }
 
         // Update FPS counter
         frameCount++;

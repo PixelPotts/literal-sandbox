@@ -409,18 +409,84 @@ void SandSimulator::logDebug(const std::string& message) {
     debugFile.close();
 }
 
-ParticleColor SandSimulator::generateRandomColor(int baseR, int baseG, int baseB, int variation) {
-    ParticleColor color;
-    if (variation > 0) {
-        color.r = clamp(baseR + (std::rand() % (variation * 2 + 1)) - variation, 0, 255);
-        color.g = clamp(baseG + (std::rand() % (variation * 2 + 1)) - variation, 0, 255);
-        color.b = clamp(baseB + (std::rand() % (variation * 2 + 1)) - variation, 0, 255);
-    } else {
-        color.r = baseR;
-        color.g = baseG;
-        color.b = baseB;
+// Helper struct for HSL color
+struct HSL {
+    double h; // Hue [0, 360]
+    double s; // Saturation [0, 1]
+    double l; // Lightness [0, 1]
+};
+
+// Converts RGB to HSL
+static HSL rgbToHsl(int r, int g, int b) {
+    double rd = (double)r / 255.0;
+    double gd = (double)g / 255.0;
+    double bd = (double)b / 255.0;
+    double max = std::max({rd, gd, bd});
+    double min = std::min({rd, gd, bd});
+    double h = 0, s = 0, l = (max + min) / 2.0;
+
+    if (max != min) {
+        double d = max - min;
+        s = l > 0.5 ? d / (2.0 - max - min) : d / (max + min);
+        if (max == rd) {
+            h = (gd - bd) / d + (gd < bd ? 6.0 : 0.0);
+        } else if (max == gd) {
+            h = (bd - rd) / d + 2.0;
+        } else if (max == bd) {
+            h = (rd - gd) / d + 4.0;
+        }
+        h /= 6.0;
     }
-    return color;
+    return {h * 360.0, s, l};
+}
+
+// Converts HSL to RGB
+static ParticleColor hslToRgb(double h, double s, double l) {
+    double r, g, b;
+    if (s == 0) {
+        r = g = b = l; // achromatic
+    } else {
+        auto hue2rgb = [](double p, double q, double t) {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1.0/6.0) return p + (q - p) * 6.0 * t;
+            if (t < 1.0/2.0) return q;
+            if (t < 2.0/3.0) return p + (q - p) * (2.0/3.0 - t) * 6.0;
+            return p;
+        };
+        double q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
+        double p = 2.0 * l - q;
+        double h_norm = h / 360.0;
+        r = hue2rgb(p, q, h_norm + 1.0/3.0);
+        g = hue2rgb(p, q, h_norm);
+        b = hue2rgb(p, q, h_norm - 1.0/3.0);
+    }
+    return {
+        (unsigned char)(r * 255),
+        (unsigned char)(g * 255),
+        (unsigned char)(b * 255)
+    };
+}
+
+ParticleColor SandSimulator::generateRandomColor(int baseR, int baseG, int baseB, int variation) {
+    if (variation > 0) {
+        HSL hsl = rgbToHsl(baseR, baseG, baseB);
+
+        // Generate a random scalar between -1.0 and 1.0
+        double random_scalar = ((double)std::rand() / RAND_MAX) * 2.0 - 1.0;
+
+        // Apply variation to lightness
+        // The variation parameter is an integer, let's scale it to be a factor for lightness
+        double lightness_variation = (double)variation / 255.0;
+        hsl.l += random_scalar * lightness_variation;
+
+        // Clamp lightness
+        hsl.l = std::max(0.0, std::min(1.0, hsl.l));
+
+        return hslToRgb(hsl.h, hsl.s, hsl.l);
+    } else {
+        return {(unsigned char)baseR, (unsigned char)baseG, (unsigned char)baseB};
+    }
 }
 
 void SandSimulator::moveParticle(int fromX, int fromY, int toX, int toY) {
@@ -1900,7 +1966,7 @@ void SandSimulator::updateParticleVelocity(int x, int y) {
     float oldVY = velocities[idx].vy;
 
     // Apply gravity
-    velocities[idx].vy += config.gravity;
+    velocities[idx].vy += config.particleFallAcceleration;
 
     // Apply air resistance
     velocities[idx].vx *= (1.0f - config.airResistance);

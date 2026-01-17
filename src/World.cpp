@@ -349,15 +349,80 @@ bool World::isOccupied(int worldX, int worldY) const {
     return getParticle(worldX, worldY) != ParticleType::EMPTY;
 }
 
-ParticleColor World::generateRandomColor(int baseR, int baseG, int baseB, int variation) {
-    int r = baseR + (std::rand() % (variation * 2 + 1)) - variation;
-    int g = baseG + (std::rand() % (variation * 2 + 1)) - variation;
-    int b = baseB + (std::rand() % (variation * 2 + 1)) - variation;
+// Helper struct for HSL color
+struct HSL {
+    double h; // Hue [0, 360]
+    double s; // Saturation [0, 1]
+    double l; // Lightness [0, 1]
+};
+
+// Converts RGB to HSL
+static HSL rgbToHsl(int r, int g, int b) {
+    double rd = (double)r / 255.0;
+    double gd = (double)g / 255.0;
+    double bd = (double)b / 255.0;
+    double max_val = std::max({rd, gd, bd});
+    double min_val = std::min({rd, gd, bd});
+    double h = 0, s = 0, l = (max_val + min_val) / 2.0;
+
+    if (max_val != min_val) {
+        double d = max_val - min_val;
+        s = l > 0.5 ? d / (2.0 - max_val - min_val) : d / (max_val + min_val);
+        if (max_val == rd) {
+            h = (gd - bd) / d + (gd < bd ? 6.0 : 0.0);
+        } else if (max_val == gd) {
+            h = (bd - rd) / d + 2.0;
+        } else if (max_val == bd) {
+            h = (rd - gd) / d + 4.0;
+        }
+        h /= 6.0;
+    }
+    return {h * 360.0, s, l};
+}
+
+// Converts HSL to RGB
+static ParticleColor hslToRgb(double h, double s, double l) {
+    double r, g, b;
+    if (s == 0) {
+        r = g = b = l; // achromatic
+    } else {
+        auto hue2rgb = [](double p, double q, double t) {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1.0/6.0) return p + (q - p) * 6.0 * t;
+            if (t < 1.0/2.0) return q;
+            if (t < 2.0/3.0) return p + (q - p) * (2.0/3.0 - t) * 6.0;
+            return p;
+        };
+        double q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
+        double p = 2.0 * l - q;
+        double h_norm = h / 360.0;
+        r = hue2rgb(p, q, h_norm + 1.0/3.0);
+        g = hue2rgb(p, q, h_norm);
+        b = hue2rgb(p, q, h_norm - 1.0/3.0);
+    }
     return {
-        static_cast<unsigned char>(std::max(0, std::min(255, r))),
-        static_cast<unsigned char>(std::max(0, std::min(255, g))),
-        static_cast<unsigned char>(std::max(0, std::min(255, b)))
+        static_cast<unsigned char>(std::max(0.0, std::min(255.0, r * 255))),
+        static_cast<unsigned char>(std::max(0.0, std::min(255.0, g * 255))),
+        static_cast<unsigned char>(std::max(0.0, std::min(255.0, b * 255)))
     };
+}
+
+ParticleColor World::generateRandomColor(int baseR, int baseG, int baseB, int variation) {
+    if (variation > 0) {
+        HSL hsl = rgbToHsl(baseR, baseG, baseB);
+
+        double random_scalar = ((double)std::rand() / RAND_MAX) * 2.0 - 1.0;
+
+        double lightness_variation = (double)variation / 255.0;
+        hsl.l += random_scalar * lightness_variation;
+
+        hsl.l = std::max(0.0, std::min(1.0, hsl.l));
+
+        return hslToRgb(hsl.h, hsl.s, hsl.l);
+    } else {
+        return {(unsigned char)baseR, (unsigned char)baseG, (unsigned char)baseB};
+    }
 }
 
 void World::spawnParticleAt(int worldX, int worldY, ParticleType type) {
@@ -866,7 +931,7 @@ void World::updateChunk(WorldChunk* chunk, float deltaTime) {
             ParticleVelocity vel = chunk->getVelocity(localX, localY);
 
             // Apply gravity
-            vel.vy += 0.6f;
+            vel.vy += config.particleFallAcceleration;
 
             // Apply air resistance
             vel.vx *= 0.98f;
@@ -991,6 +1056,17 @@ void World::updateChunk(WorldChunk* chunk, float deltaTime) {
         chunk->setExploding(pos.first, pos.second, false);
     }
 
+    // Pass 1: Reset lava colors to base before applying any dynamic effects
+    for (int localY = 0; localY < WorldChunk::CHUNK_SIZE; localY++) {
+        for (int localX = 0; localX < WorldChunk::CHUNK_SIZE; localX++) {
+            if (chunk->getParticle(localX, localY) == ParticleType::LAVA) {
+                // Generate a fresh random color from the base config for lava
+                chunk->setColor(localX, localY, generateRandomColor(
+                    config.lava.colorR, config.lava.colorG, config.lava.colorB, config.lava.colorVariation));
+            }
+        }
+    }
+
     // Second pass: Normal automaton physics (non-exploding particles)
     for (int localY = WorldChunk::CHUNK_SIZE - 1; localY >= 0; localY--) {
         bool leftToRight = (localY % 2 == 0);
@@ -1026,13 +1102,46 @@ void World::updateChunk(WorldChunk* chunk, float deltaTime) {
         }
     }
 
-    
-    // Third pass: Wetness simulation
+    // Fourth pass: Apply visual effects (e.g., brightening lava edges)
     for (int localY = 0; localY < WorldChunk::CHUNK_SIZE; localY++) {
         for (int localX = 0; localX < WorldChunk::CHUNK_SIZE; localX++) {
-            int worldX = worldStartX + localX;
-            int worldY = worldStartY + localY;
-            updateWetnessForParticle(worldX, worldY);
+            if (chunk->getParticle(localX, localY) == ParticleType::LAVA) {
+                int worldX = worldStartX + localX;
+                int worldY = worldStartY + localY;
+
+                bool isEdgeLava = false;
+                // Check 8 neighbors
+                const int dx[] = {-1, 0, 1, -1, 1, -1, 0, 1};
+                const int dy[] = {-1, -1, -1, 0, 0, 1, 1, 1};
+
+                for (int dir = 0; dir < 8; ++dir) {
+                    int nx = worldX + dx[dir];
+                    int ny = worldY + dy[dir];
+
+                    if (!inWorldBounds(nx, ny)) {
+                        // Edge of the world is considered a non-lava neighbor
+                        isEdgeLava = true;
+                        break;
+                    }
+
+                    ParticleType neighborType = getParticle(nx, ny);
+                    if (neighborType != ParticleType::EMPTY && neighborType != ParticleType::LAVA) {
+                        isEdgeLava = true;
+                        break;
+                    }
+                }
+
+                if (isEdgeLava) {
+                    ParticleColor currentColor = chunk->getColor(localX, localY);
+                    HSL hsl = rgbToHsl(currentColor.r, currentColor.g, currentColor.b);
+
+                    // Brighten the lightness (L)
+                    hsl.l = std::min(1.0, hsl.l + 0.15); // Increase lightness by 15%
+
+                    ParticleColor brightenedColor = hslToRgb(hsl.h, hsl.s, hsl.l);
+                    chunk->setColor(localX, localY, brightenedColor);
+                }
+            }
         }
     }
 
@@ -1309,13 +1418,13 @@ float World::getMaxSaturation(ParticleType type) const {
 }
 
 
-bool World::checkCapsuleCollision(float centerX, float centerY, float radius, float height) const {
-    // Capsule is two semicircles connected by a rectangle
-    // Sample points along the capsule perimeter to check for solid particles
+bool World::checkCapsuleCollision(float centerX, float centerY, float radius, float height, float& collisionY) const {
+    collisionY = WORLD_HEIGHT; // Initialize to a large value
+    bool collided = false;
 
-    float halfBodyHeight = (height - 2 * radius) / 2.0f;
-    float topCircleY = centerY - halfBodyHeight;
-    float botCircleY = centerY + halfBodyHeight;
+    // centerY is the center of the top circle
+    float topCircleY = centerY;
+    float botCircleY = centerY + height;
 
     // Check points along the capsule perimeter
     // Top semicircle
@@ -1324,7 +1433,10 @@ bool World::checkCapsuleCollision(float centerX, float centerY, float radius, fl
         int px = (int)(centerX + std::cos(rad) * radius);
         int py = (int)(topCircleY - std::sin(rad) * radius);
         if (inWorldBounds(px, py) && isSolidParticle(getParticle(px, py))) {
-            return true;
+            collided = true;
+            if (py < collisionY) {
+                collisionY = py;
+            }
         }
     }
 
@@ -1334,7 +1446,10 @@ bool World::checkCapsuleCollision(float centerX, float centerY, float radius, fl
         int px = (int)(centerX + std::cos(rad) * radius);
         int py = (int)(botCircleY + std::sin(rad) * radius);
         if (inWorldBounds(px, py) && isSolidParticle(getParticle(px, py))) {
-            return true;
+            collided = true;
+            if (py < collisionY) {
+                collisionY = py;
+            }
         }
     }
 
@@ -1345,14 +1460,20 @@ bool World::checkCapsuleCollision(float centerX, float centerY, float radius, fl
         int py = (int)y;
 
         if (inWorldBounds(leftX, py) && isSolidParticle(getParticle(leftX, py))) {
-            return true;
+            collided = true;
+            if (py < collisionY) {
+                collisionY = py;
+            }
         }
         if (inWorldBounds(rightX, py) && isSolidParticle(getParticle(rightX, py))) {
-            return true;
+            collided = true;
+            if (py < collisionY) {
+                collisionY = py;
+            }
         }
     }
 
-    return false;
+    return collided;
 }
 
 void World::procedurallyGenerateInnerRocks(WorldChunk* chunk) {

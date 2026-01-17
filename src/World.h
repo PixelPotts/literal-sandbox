@@ -225,7 +225,7 @@ public:
 
     // Collision detection for player/entities
     bool isSolidParticle(ParticleType type) const;
-    bool checkCapsuleCollision(float centerX, float centerY, float radius, float height) const;
+    bool checkCapsuleCollision(float centerX, float centerY, float radius, float height, float& collisionY) const;
 
 private:
     Config config;

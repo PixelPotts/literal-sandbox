@@ -61,9 +61,7 @@ struct Config {
     bool processLeftToRight;
 
     // Physics
-    float gravity;
     float airResistance;
-    bool useVelocityPhysics;
     float particleFallAcceleration;
 
     // Temperature physics

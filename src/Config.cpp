@@ -11,13 +11,12 @@ void Config::setDefaults() {
     windowWidth = 1000;
     windowHeight = 1000;
     pixelScale = 1;
-    fallSpeed = 1;
+    fallSpeed = 100;
     processLeftToRight = true;
 
     // Physics defaults
-    gravity = 0.5f;
     airResistance = 0.01f;
-    useVelocityPhysics = true;
+    particleFallAcceleration = 0.6f;
 
     // Temperature physics defaults
     energyConversionFactor = 0.1f;  // 10% heat transfer per frame
@@ -448,13 +447,8 @@ void Config::parseLine(const std::string& line) {
         iss >> value;
         processLeftToRight = (value == "true");
     }
-    else if (key == "gravity") iss >> gravity;
     else if (key == "air_resistance") iss >> airResistance;
-    else if (key == "use_velocity_physics") {
-        std::string value;
-        iss >> value;
-        useVelocityPhysics = (value == "true");
-    }
+    else if (key == "particle_fall_acceleration") iss >> particleFallAcceleration;
     else if (key == "energy_conversion_factor") iss >> energyConversionFactor;
     else if (key == "wetness_absorption_rate") iss >> wetnessAbsorptionRate;
     else if (key == "wetness_spread_rate") iss >> wetnessSpreadRate;
