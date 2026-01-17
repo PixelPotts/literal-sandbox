@@ -1131,9 +1131,15 @@ void World::updateChunk(WorldChunk* chunk, float deltaTime) {
                     }
                 }
 
-                if (isEdgeLava) {
-                    // DEBUG: Set to bright magenta to verify edge detection
-                    chunk->setColor(localX, localY, {255, 0, 255});
+                if (isEdgeLava && config.lava.edgeBrightening) {
+                    ParticleColor currentColor = chunk->getColor(localX, localY);
+                    HSL hsl = rgbToHsl(currentColor.r, currentColor.g, currentColor.b);
+
+                    // Brighten slightly - keep orange, just more vivid
+                    hsl.l = std::min(0.7, hsl.l + config.lava.edgeBrighteningAmount);
+
+                    ParticleColor brightenedColor = hslToRgb(hsl.h, hsl.s, hsl.l);
+                    chunk->setColor(localX, localY, brightenedColor);
                 }
             }
         }

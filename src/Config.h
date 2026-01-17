@@ -51,6 +51,10 @@ struct ParticleTypeConfig {
     float innerRockMinRadius;
     float innerRockMaxRadius;
     float innerRockDarkness;
+
+    // Visual effects
+    bool edgeBrightening;
+    float edgeBrighteningAmount;
 };
 
 struct Config {

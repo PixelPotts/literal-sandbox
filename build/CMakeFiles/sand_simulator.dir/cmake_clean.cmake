@@ -1,6 +1,12 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o"
+  "CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o.d"
+  "CMakeFiles/sand_simulator.dir/src/Collectible.cpp.o"
+  "CMakeFiles/sand_simulator.dir/src/Collectible.cpp.o.d"
   "CMakeFiles/sand_simulator.dir/src/Config.cpp.o"
   "CMakeFiles/sand_simulator.dir/src/Config.cpp.o.d"
+  "CMakeFiles/sand_simulator.dir/src/Gun.cpp.o"
+  "CMakeFiles/sand_simulator.dir/src/Gun.cpp.o.d"
   "CMakeFiles/sand_simulator.dir/src/SandSimulator.cpp.o"
   "CMakeFiles/sand_simulator.dir/src/SandSimulator.cpp.o.d"
   "CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o"

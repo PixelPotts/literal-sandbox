@@ -11,6 +11,9 @@
 #include "SandSimulator.h"
 #include "Sprite.h"
 #include "SceneObject.h"
+#include "Collectible.h"
+#include "Gun.h"
+#include "Bullet.h"
 
 struct UIDropdown {
     SDL_Rect rect;
@@ -32,67 +35,20 @@ struct CachedText {
     }
 };
 
-// Bullet projectile for player shooting
-struct Bullet {
-    float x, y;           // World position
-    float vx, vy;         // Velocity (normalized direction * speed)
-    bool active;          // Is this bullet still alive?
-    static constexpr float SPEED = 500.0f;       // Pixels per second
-    static constexpr int EXPLOSION_RADIUS = 18;  // Explosion radius on impact
-    static constexpr float EXPLOSION_FORCE = 14.0f; // Force applied to particles
 
-    Bullet() : x(0), y(0), vx(0), vy(0), active(false) {}
 
-    Bullet(float startX, float startY, float targetX, float targetY)
-        : x(startX), y(startY), active(true) {
-        float dx = targetX - startX;
-        float dy = targetY - startY;
-        float len = std::sqrt(dx * dx + dy * dy);
-        if (len > 0.1f) {
-            vx = (dx / len) * SPEED;
-            vy = (dy / len) * SPEED;
-        } else {
-            vx = SPEED;
-            vy = 0;
-        }
+// Helper to create a scene object from a sprite file at a position
+std::shared_ptr<SceneObject> createSpriteObject(const std::string& spritePath, float x, float y, SDL_Renderer* renderer) {
+    auto sprite = std::make_shared<Sprite>();
+    if (!sprite->load(spritePath, renderer)) {
+        std::cerr << "Failed to load sprite: " << spritePath << std::endl;
+        return nullptr;
     }
-
-    // Update bullet position, return true if hit something
-    bool update(World& world, float deltaTime) {
-        if (!active) return false;
-
-        float newX = x + vx * deltaTime;
-        float newY = y + vy * deltaTime;
-
-        // Check for collision along the path (simple raycast)
-        int steps = std::max(1, (int)(SPEED * deltaTime / 2.0f)); // Check every 2 pixels
-        float stepX = (newX - x) / steps;
-        float stepY = (newY - y) / steps;
-
-        for (int i = 0; i <= steps; i++) {
-            int checkX = (int)(x + stepX * i);
-            int checkY = (int)(y + stepY * i);
-
-            // Check world bounds
-            if (!world.inWorldBounds(checkX, checkY)) {
-                active = false;
-                return false;
-            }
-
-            // Check for particle hit
-            if (world.isOccupied(checkX, checkY)) {
-                // Explode at this position
-                world.explodeAt(checkX, checkY, EXPLOSION_RADIUS, EXPLOSION_FORCE);
-                active = false;
-                return true;
-            }
-        }
-
-        x = newX;
-        y = newY;
-        return false;
-    }
-};
+    auto obj = std::make_shared<SceneObject>();
+    obj->setSprite(sprite);
+    obj->setPosition(x, y);
+    return obj;
+}
 
 void drawText(SDL_Renderer* renderer, TTF_Font* font, const std::string& text, int x, int y, SDL_Color color) {
     SDL_Surface* surface = TTF_RenderText_Solid(font, text.c_str(), color);
@@ -208,6 +164,8 @@ int main(int argc, char* argv[]) {
         std::cout << "Using default configuration\n";
     }
 
+    SandSimulator sandSimulator(config);
+
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "SDL initialization failed: " << SDL_GetError() << "\n";
         return 1;
@@ -302,10 +260,11 @@ int main(int argc, char* argv[]) {
     // Create World
     World world(config);
 
-    // Viewport is the game's virtual size (from rules.txt, e.g. 400x400)
-    // This gets scaled up to fill the screen
-    int viewportWidth = config.windowWidth;
+    // Viewport is the game's virtual size
+    // Use vertical height from config, calculate horizontal to fill screen with uniform scaling
     int viewportHeight = config.windowHeight;
+    float uniformScale = (float)displayMode.h / (float)viewportHeight;
+    int viewportWidth = (int)(displayMode.w / uniformScale);
     world.setViewportSize(viewportWidth, viewportHeight);
 
     // Set scene image - will lazy load chunks as they come into view
@@ -326,11 +285,28 @@ int main(int argc, char* argv[]) {
 
     // Position player at (100, 100) from bottom-left origin
     // World Y increases downward, so bottom of world = WORLD_HEIGHT
-    float playerStartX = 20.0f;
-    float playerStartY = World::WORLD_HEIGHT - 20.0f - 11.0f;  // 20 from bottom, minus sprite height
+    float playerStartX = 47.0f;
+    float playerStartY = 26065.0f;
     player->setPosition(playerStartX, playerStartY);
 
     world.addSceneObject(player);
+
+    // Create orb1 collectible
+    std::vector<std::shared_ptr<Collectible>> collectibles;
+    auto orb1 = std::make_shared<Collectible>();
+    if (orb1->create("../scenes/orb1.png", 581.0f, 25750.0f, renderer)) {
+        world.addSceneObject(orb1->getSceneObject());
+        collectibles.push_back(orb1);
+    }
+
+    // Create gun1 collectible
+    std::vector<std::shared_ptr<Gun>> guns;
+    std::shared_ptr<Gun> equippedGun = nullptr;
+    auto gun1 = std::make_shared<Gun>();
+    if (gun1->create("../scenes/gun1.png", 106.0f, 26062.0f, renderer)) {
+        world.addSceneObject(gun1->getSceneObject());
+        guns.push_back(gun1);
+    }
 
     // Position camera to center on player (with bounds clamping)
     Camera& cam = world.getCamera();
@@ -360,9 +336,9 @@ int main(int argc, char* argv[]) {
 
     std::vector<Uint32> pixels(viewportWidth * viewportHeight);
 
-    // Scale factors for mouse input (screen -> viewport)
-    float scaleX = (float)displayMode.w / (float)viewportWidth;
-    float scaleY = (float)displayMode.h / (float)viewportHeight;
+    // Scale factors for mouse input (screen -> viewport) - uniform scaling
+    float scaleX = uniformScale;
+    float scaleY = uniformScale;
 
     // Setup material dropdown
     UIDropdown dropdown;
@@ -410,6 +386,7 @@ int main(int argc, char* argv[]) {
     bool moveLeft = false, moveRight = false;
     bool shiftHeld = false;
     bool thrustHeld = false;  // Spacebar for jetpack thrust
+    bool eKeyPressed = false;  // For collectible interaction
 
     // Player physics
     float playerVelX = 0.0f;
@@ -462,6 +439,9 @@ int main(int argc, char* argv[]) {
                     case SDLK_SPACE:
                         thrustHeld = true;
                         break;
+                    case SDLK_e:
+                        eKeyPressed = true;
+                        break;
                 }
             }
             else if (event.type == SDL_KEYUP) {
@@ -478,6 +458,9 @@ int main(int argc, char* argv[]) {
                         break;
                     case SDLK_SPACE:
                         thrustHeld = false;
+                        break;
+                    case SDLK_e:
+                        eKeyPressed = false;
                         break;
                 }
             }
@@ -498,13 +481,18 @@ int main(int argc, char* argv[]) {
                     } else if (handleDropdownClick(dropdown, event.button.x, event.button.y)) {
                         volumeDropdown.isOpen = false;
                         fpsDropdown.isOpen = false;
-                    } else {
-                        // Fire bullet toward cursor (left click when not on dropdown)
-                        float worldMouseX = cam.x + (event.button.x / scaleX);
-                        float worldMouseY = cam.y + (event.button.y / scaleY);
-                        float bulletStartX = player->getX() + 2.0f;
-                        float bulletStartY = player->getY() + 5.5f;
-                        bullets.emplace_back(bulletStartX, bulletStartY, worldMouseX, worldMouseY);
+                    } else if (equippedGun && equippedGun->isEquipped()) {
+                        Uint32 currentTime = SDL_GetTicks();
+                        if (equippedGun->canFire(currentTime)) {
+                            float muzzleX, muzzleY;
+                            equippedGun->getMuzzlePosition(muzzleX, muzzleY);
+
+                            float worldMouseX = cam.x + (event.button.x / scaleX);
+                            float worldMouseY = cam.y + (event.button.y / scaleY);
+
+                            equippedGun->fire(bullets, muzzleX, muzzleY, worldMouseX, worldMouseY);
+
+                        }
                     }
                 }
             }
@@ -754,6 +742,36 @@ int main(int argc, char* argv[]) {
             world.update(deltaTime / config.fallSpeed);
         }
 
+        // Update and check collectibles
+        float playerW = (float)playerSprite->getWidth();
+        float playerH = (float)playerSprite->getHeight();
+        for (auto& collectible : collectibles) {
+            if (collectible->isActive()) {
+                collectible->checkCollection(player->getX(), player->getY(), playerW, playerH, eKeyPressed);
+                collectible->update(deltaTime);
+            }
+        }
+
+        // Check for gun collection
+        for (auto& gun : guns) {
+            if (!gun->isEquipped() && !gun->isCollected()) {
+                if (gun->checkCollection(player->getX(), player->getY(), playerW, playerH, eKeyPressed)) {
+                    equippedGun = gun;
+                }
+            }
+        }
+
+        // Update equipped gun position and rotation toward cursor
+        if (equippedGun && equippedGun->isEquipped()) {
+            int curMouseX, curMouseY;
+            SDL_GetMouseState(&curMouseX, &curMouseY);
+            float cursorWorldX = cam.x + (curMouseX / scaleX);
+            float cursorWorldY = cam.y + (curMouseY / scaleY);
+            float playerCenterX = player->getX() + playerW / 2.0f;
+            float playerCenterY = player->getY() + playerH / 2.0f;
+            equippedGun->updateEquipped(playerCenterX, playerCenterY, cursorWorldX, cursorWorldY);
+        }
+
         // Ensure OpenGL context is current
         if (SDL_GL_MakeCurrent(window, glContext) < 0) {
             static bool logged = false;
@@ -782,37 +800,22 @@ int main(int argc, char* argv[]) {
                     pixels[idx] = (color.r << 16) | (color.g << 8) | color.b;
                 } else {
                     if (worldX >= 0 && worldX < World::WORLD_WIDTH &&
-                        worldY >= 0 && worldY < World::WORLD_HEIGHT) {
+                        worldY >= 0 && worldY < World::WORLD_HEIGHT) { // Corrected condition
                         pixels[idx] = 0x000010;  // Very dark blue
                     } else {
                         pixels[idx] = 0x200000;  // Dark red for outside world
                     }
                 }
+
+
             }
         }
 
-        // Draw bullets as white crosses
-        for (const auto& bullet : bullets) {
-            if (!bullet.active) continue;
-            int screenX = (int)(bullet.x - cam.x);
-            int screenY = (int)(bullet.y - cam.y);
 
-            // Draw a small white cross (5x5)
-            const Uint32 white = 0xFFFFFF;
-            for (int i = -2; i <= 2; i++) {
-                // Horizontal line
-                int px = screenX + i;
-                int py = screenY;
-                if (px >= 0 && px < viewportWidth && py >= 0 && py < viewportHeight) {
-                    pixels[py * viewportWidth + px] = white;
-                }
-                // Vertical line
-                px = screenX;
-                py = screenY + i;
-                if (px >= 0 && px < viewportWidth && py >= 0 && py < viewportHeight) {
-                    pixels[py * viewportWidth + px] = white;
-                }
-            }
+
+        // Draw bullets
+        for (auto& bullet : bullets) {
+            bullet.draw(pixels, viewportWidth, viewportHeight, cam.x, cam.y, renderer);
         }
 
         // Update texture
@@ -862,88 +865,28 @@ int main(int argc, char* argv[]) {
             int screenW = (int)(spr->getWidth() * scaleX);
             int screenH = (int)(spr->getHeight() * scaleY);
 
+            SDL_Texture* tex = spr->getTexture();
             SDL_Rect dstRect = {screenX, screenY, screenW, screenH};
-            SDL_RenderCopy(renderer, spr->getTexture(), nullptr, &dstRect);
+            SDL_RenderCopy(renderer, tex, nullptr, &dstRect);
         }
 
-        // Draw player colliders
-        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-        
-        // Draw box collider
-        const auto& p_box = player->getCollider();
-        SDL_Rect box_rect = {
-            (int)((player->getX() + p_box.x - cam.x) * scaleX),
-            (int)((player->getY() + p_box.y - cam.y) * scaleY),
-            (int)(p_box.width * scaleX),
-            (int)(p_box.height * scaleY)
-        };
-        SDL_RenderDrawRect(renderer, &box_rect);
-
-        // Draw capsule collider
-        const auto& p_cap = player->getCapsule();
-        float p_x = player->getX();
-        float p_y = player->getY();
-
-        float capsule_cx_world = p_x + p_cap.offsetX;
-        float top_circle_cy_world = p_y + p_cap.offsetY;
-        float bottom_circle_cy_world = top_circle_cy_world + p_cap.height;
-
-        // Draw top semi-circle
-        for (int angle = 0; angle <= 180; angle += 15) {
-            float rad1 = angle * M_PI / 180.0f;
-            float rad2 = (angle + 15) * M_PI / 180.0f;
-            int x1 = (int)(((capsule_cx_world + std::cos(rad1) * p_cap.radius) - cam.x) * scaleX);
-            int y1 = (int)(((top_circle_cy_world - std::sin(rad1) * p_cap.radius) - cam.y) * scaleY);
-            int x2 = (int)(((capsule_cx_world + std::cos(rad2) * p_cap.radius) - cam.x) * scaleX);
-            int y2 = (int)(((top_circle_cy_world - std::sin(rad2) * p_cap.radius) - cam.y) * scaleY);
-            SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
+        // Render collectible explosion particles
+        for (auto& collectible : collectibles) {
+            collectible->render(renderer, cam.x, cam.y, scaleX, scaleY);
         }
 
-        // Draw bottom semi-circle
-        for (int angle = 180; angle <= 360; angle += 15) {
-            float rad1 = angle * M_PI / 180.0f;
-            float rad2 = (angle + 15) * M_PI / 180.0f;
-            int x1 = (int)(((capsule_cx_world + std::cos(rad1) * p_cap.radius) - cam.x) * scaleX);
-            int y1 = (int)(((bottom_circle_cy_world - std::sin(rad1) * p_cap.radius) - cam.y) * scaleY);
-            int x2 = (int)(((capsule_cx_world + std::cos(rad2) * p_cap.radius) - cam.x) * scaleX);
-            int y2 = (int)(((bottom_circle_cy_world - std::sin(rad2) * p_cap.radius) - cam.y) * scaleY);
-            SDL_RenderDrawLine(renderer, x1, y1, x2, y2);
+        // Render equipped gun
+        if (equippedGun && equippedGun->isEquipped()) {
+            equippedGun->renderEquipped(renderer, cam.x, cam.y, scaleX, scaleY);
         }
-        
-        // Draw vertical lines
-        int x1_left = (int)(((capsule_cx_world - p_cap.radius) - cam.x) * scaleX);
-        int y1_left = (int)((top_circle_cy_world - cam.y) * scaleY);
-        int x2_left = (int)(((capsule_cx_world - p_cap.radius) - cam.x) * scaleX);
-        int y2_left = (int)((bottom_circle_cy_world - cam.y) * scaleY);
-        SDL_RenderDrawLine(renderer, x1_left, y1_left, x2_left, y2_left);
 
-        int x1_right = (int)(((capsule_cx_world + p_cap.radius) - cam.x) * scaleX);
-        int y1_right = (int)((top_circle_cy_world - cam.y) * scaleY);
-        int x2_right = (int)(((capsule_cx_world + p_cap.radius) - cam.x) * scaleX);
-        int y2_right = (int)((bottom_circle_cy_world - cam.y) * scaleY);
-        SDL_RenderDrawLine(renderer, x1_right, y1_right, x2_right, y2_right);
+        // Draw player colliders (disabled)
+        // const auto& p_box = player->getCollider();
 
         // Draw UI
         drawDropdown(renderer, font, dropdown);
         drawDropdown(renderer, font, volumeDropdown);
         drawDropdown(renderer, font, fpsDropdown);
-
-        // Draw ground colliders using edge detection
-        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-        for (int y = visStartY; y < visEndY; ++y) {
-            for (int x = visStartX; x < visEndX; ++x) {
-                bool is_solid = world.isSolidParticle(world.getParticle(x, y));
-                bool up_is_solid = world.isSolidParticle(world.getParticle(x, y - 1));
-                bool left_is_solid = world.isSolidParticle(world.getParticle(x - 1, y));
-
-                if (is_solid != up_is_solid) {
-                    SDL_RenderDrawLine(renderer, (int)((x - cam.x) * scaleX), (int)((y - cam.y) * scaleY), (int)((x + 1 - cam.x) * scaleX), (int)((y - cam.y) * scaleY));
-                }
-                if (is_solid != left_is_solid) {
-                    SDL_RenderDrawLine(renderer, (int)((x - cam.x) * scaleX), (int)((y - cam.y) * scaleY), (int)((x - cam.x) * scaleX), (int)((y + 1 - cam.y) * scaleY));
-                }
-            }
-        }
 
         // Update FPS counter
         frameCount++;
@@ -959,7 +902,9 @@ int main(int argc, char* argv[]) {
         std::string fpsText = "FPS: " + std::to_string((int)currentFPS);
         drawCachedText(renderer, smallFont, fpsCache, fpsText, 5, displayMode.h - 15, whiteColor);
 
-        std::string posText = "Pos: " + std::to_string((int)cam.x) + ", " + std::to_string((int)cam.y);
+        float playerCenterX = player->getX() + playerSprite->getWidth() / 2.0f;
+        float playerCenterY = player->getY() + playerSprite->getHeight() / 2.0f;
+        std::string posText = "Pos: " + std::to_string((int)playerCenterX) + ", " + std::to_string((int)playerCenterY);
         drawCachedText(renderer, smallFont, posCache, posText, 5, displayMode.h - 30, whiteColor);
 
         // Draw particle counts

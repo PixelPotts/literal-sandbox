@@ -165,6 +165,8 @@ void Config::setDefaults() {
     lava.innerRockMinRadius = 0;
     lava.innerRockMaxRadius = 0;
     lava.innerRockDarkness = 0.5f;
+    lava.edgeBrightening = true;
+    lava.edgeBrighteningAmount = 0.15f;
 
     // Steam defaults
     steam.colorR = 240;

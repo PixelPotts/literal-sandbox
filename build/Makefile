@@ -129,6 +129,54 @@ sand_simulator/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/build
 .PHONY : sand_simulator/fast
 
+src/Bullet.o: src/Bullet.cpp.o
+.PHONY : src/Bullet.o
+
+# target to build an object file
+src/Bullet.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o
+.PHONY : src/Bullet.cpp.o
+
+src/Bullet.i: src/Bullet.cpp.i
+.PHONY : src/Bullet.i
+
+# target to preprocess a source file
+src/Bullet.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Bullet.cpp.i
+.PHONY : src/Bullet.cpp.i
+
+src/Bullet.s: src/Bullet.cpp.s
+.PHONY : src/Bullet.s
+
+# target to generate assembly for a file
+src/Bullet.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Bullet.cpp.s
+.PHONY : src/Bullet.cpp.s
+
+src/Collectible.o: src/Collectible.cpp.o
+.PHONY : src/Collectible.o
+
+# target to build an object file
+src/Collectible.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Collectible.cpp.o
+.PHONY : src/Collectible.cpp.o
+
+src/Collectible.i: src/Collectible.cpp.i
+.PHONY : src/Collectible.i
+
+# target to preprocess a source file
+src/Collectible.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Collectible.cpp.i
+.PHONY : src/Collectible.cpp.i
+
+src/Collectible.s: src/Collectible.cpp.s
+.PHONY : src/Collectible.s
+
+# target to generate assembly for a file
+src/Collectible.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Collectible.cpp.s
+.PHONY : src/Collectible.cpp.s
+
 src/Config.o: src/Config.cpp.o
 .PHONY : src/Config.o
 
@@ -152,6 +200,30 @@ src/Config.s: src/Config.cpp.s
 src/Config.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Config.cpp.s
 .PHONY : src/Config.cpp.s
+
+src/Gun.o: src/Gun.cpp.o
+.PHONY : src/Gun.o
+
+# target to build an object file
+src/Gun.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Gun.cpp.o
+.PHONY : src/Gun.cpp.o
+
+src/Gun.i: src/Gun.cpp.i
+.PHONY : src/Gun.i
+
+# target to preprocess a source file
+src/Gun.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Gun.cpp.i
+.PHONY : src/Gun.cpp.i
+
+src/Gun.s: src/Gun.cpp.s
+.PHONY : src/Gun.s
+
+# target to generate assembly for a file
+src/Gun.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Gun.cpp.s
+.PHONY : src/Gun.cpp.s
 
 src/SandSimulator.o: src/SandSimulator.cpp.o
 .PHONY : src/SandSimulator.o
@@ -330,9 +402,18 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... sand_simulator"
+	@echo "... src/Bullet.o"
+	@echo "... src/Bullet.i"
+	@echo "... src/Bullet.s"
+	@echo "... src/Collectible.o"
+	@echo "... src/Collectible.i"
+	@echo "... src/Collectible.s"
 	@echo "... src/Config.o"
 	@echo "... src/Config.i"
 	@echo "... src/Config.s"
+	@echo "... src/Gun.o"
+	@echo "... src/Gun.i"
+	@echo "... src/Gun.s"
 	@echo "... src/SandSimulator.o"
 	@echo "... src/SandSimulator.i"
 	@echo "... src/SandSimulator.s"

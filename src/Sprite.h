@@ -33,6 +33,12 @@ public:
     // Get the SDL texture
     SDL_Texture* getTexture() const { return texture; }
 
+    // Get outline texture (white silhouette for glow effect)
+    SDL_Texture* getOutlineTexture() const { return outlineTexture; }
+
+    // Generate outline texture (call after load)
+    void generateOutline(SDL_Renderer* renderer, int radius = 2);
+
     // Get dimensions
     int getWidth() const { return width; }
     int getHeight() const { return height; }
@@ -50,6 +56,7 @@ public:
 
 private:
     SDL_Texture* texture;
+    SDL_Texture* outlineTexture;
     int width, height;
     std::vector<unsigned char> pixels;  // RGBA pixel data for collision
     int channels;

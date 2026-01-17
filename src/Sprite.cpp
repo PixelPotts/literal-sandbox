@@ -3,9 +3,11 @@
 #define STBI_MAX_DIMENSIONS 33554432
 #include "stb_image.h"
 #include <iostream>
+#include <cmath>
 
 Sprite::Sprite()
     : texture(nullptr)
+    , outlineTexture(nullptr)
     , width(0)
     , height(0)
     , channels(0)
@@ -16,6 +18,10 @@ Sprite::~Sprite() {
     if (texture) {
         SDL_DestroyTexture(texture);
         texture = nullptr;
+    }
+    if (outlineTexture) {
+        SDL_DestroyTexture(outlineTexture);
+        outlineTexture = nullptr;
     }
 }
 
@@ -214,4 +220,70 @@ void Sprite::getPixelColor(int x, int y, unsigned char& r, unsigned char& g, uns
     g = pixels[idx + 1];
     b = pixels[idx + 2];
     a = pixels[idx + 3];
+}
+
+void Sprite::generateOutline(SDL_Renderer* renderer, int radius) {
+    if (pixels.empty() || width == 0 || height == 0) return;
+
+    // Create outline pixel buffer (white where there's an edge)
+    std::vector<unsigned char> outlinePixels(width * height * 4, 0);
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int idx = (y * width + x) * 4;
+            unsigned char srcAlpha = pixels[idx + 3];
+
+            // Skip if this pixel is opaque (we only want outline outside the sprite)
+            if (srcAlpha > 128) continue;
+
+            // Check all neighbors within radius to find closest opaque pixel
+            float minDist = radius + 1;
+
+            for (int dy = -radius; dy <= radius; dy++) {
+                for (int dx = -radius; dx <= radius; dx++) {
+                    int nx = x + dx;
+                    int ny = y + dy;
+                    if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+
+                    int nidx = (ny * width + nx) * 4;
+                    if (pixels[nidx + 3] > 128) {
+                        float dist = std::sqrt((float)(dx*dx + dy*dy));
+                        if (dist <= radius && dist < minDist) {
+                            minDist = dist;
+                        }
+                    }
+                }
+            }
+
+            if (minDist <= radius) {
+                // Soft falloff based on distance
+                float alpha = 1.0f - (minDist / (radius + 1));
+                outlinePixels[idx + 0] = 255;  // R
+                outlinePixels[idx + 1] = 255;  // G
+                outlinePixels[idx + 2] = 255;  // B
+                outlinePixels[idx + 3] = (unsigned char)(alpha * 255);  // A
+            }
+        }
+    }
+
+    // Create texture from outline pixels
+    SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormatFrom(
+        outlinePixels.data(), width, height, 32, width * 4, SDL_PIXELFORMAT_RGBA32
+    );
+
+    if (!surface) {
+        std::cerr << "Failed to create outline surface: " << SDL_GetError() << std::endl;
+        return;
+    }
+
+    if (outlineTexture) {
+        SDL_DestroyTexture(outlineTexture);
+    }
+
+    outlineTexture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+
+    if (outlineTexture) {
+        SDL_SetTextureBlendMode(outlineTexture, SDL_BLENDMODE_BLEND);
+    }
 }
