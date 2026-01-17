@@ -1132,14 +1132,8 @@ void World::updateChunk(WorldChunk* chunk, float deltaTime) {
                 }
 
                 if (isEdgeLava) {
-                    ParticleColor currentColor = chunk->getColor(localX, localY);
-                    HSL hsl = rgbToHsl(currentColor.r, currentColor.g, currentColor.b);
-
-                    // Brighten the lightness (L)
-                    hsl.l = std::min(1.0, hsl.l + 0.15); // Increase lightness by 15%
-
-                    ParticleColor brightenedColor = hslToRgb(hsl.h, hsl.s, hsl.l);
-                    chunk->setColor(localX, localY, brightenedColor);
+                    // DEBUG: Set to bright magenta to verify edge detection
+                    chunk->setColor(localX, localY, {255, 0, 255});
                 }
             }
         }
