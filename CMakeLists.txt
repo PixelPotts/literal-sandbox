@@ -39,6 +39,3 @@ add_executable(sand_simulator ${SOURCES})
 
 # Link SDL2, SDL2_ttf, SDL2_mixer, and OpenMP
 target_link_libraries(sand_simulator ${SDL2_LIBRARIES} SDL2_ttf::SDL2_ttf SDL2_mixer OpenMP::OpenMP_CXX)
-
-# Copy rules.txt to build directory
-configure_file(${CMAKE_SOURCE_DIR}/rules.txt ${CMAKE_BINARY_DIR}/rules.txt COPYONLY)

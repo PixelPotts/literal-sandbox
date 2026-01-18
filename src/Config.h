@@ -116,9 +116,7 @@ struct Config {
     ParticleTypeConfig moss;
 
     Config();
-    bool loadFromFile(const std::string& filename);
 
 private:
     void setDefaults();
-    void parseLine(const std::string& line);
 };
