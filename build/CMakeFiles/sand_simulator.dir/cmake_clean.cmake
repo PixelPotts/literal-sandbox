@@ -13,6 +13,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o.d"
   "CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o"
   "CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o.d"
+  "CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o"
+  "CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o.d"
   "CMakeFiles/sand_simulator.dir/src/World.cpp.o"
   "CMakeFiles/sand_simulator.dir/src/World.cpp.o.d"
   "CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.o"

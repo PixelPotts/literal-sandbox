@@ -160,9 +160,9 @@ bool handleDropdownClick(UIDropdown& dropdown, int mouseX, int mouseY) {
 
 int main(int argc, char* argv[]) {
     Config config;
-    if (!config.loadFromFile("rules.txt")) {
-        std::cout << "Using default configuration\n";
-    }
+    // if (!config.loadFromFile("rules.txt")) {
+    //     std::cout << "Using default configuration\n";
+    // }
 
     SandSimulator sandSimulator(config);
 

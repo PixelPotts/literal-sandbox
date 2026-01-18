@@ -68,6 +68,16 @@ struct ParticleTypeConfig {
     float lightBrickColorMultiplier;
     float brickOutlineColorMultiplier;
 
+    // Rock border properties
+    bool borderEnabled;
+    int borderWidth;
+    float borderGradientOuterEdgeColorMultiplier;
+    float borderGradientInnerEdgeColorMultiplier;
+    std::string borderPattern;
+    int borderPatternDottedDotWidth;
+    int borderPatternDottedDotHeight;
+    int borderPatternDottedSpacing;
+
 
     // Visual effects
     bool edgeBrightening;

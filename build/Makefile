@@ -297,6 +297,30 @@ src/Sprite.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Sprite.cpp.s
 .PHONY : src/Sprite.cpp.s
 
+src/Texturize.o: src/Texturize.cpp.o
+.PHONY : src/Texturize.o
+
+# target to build an object file
+src/Texturize.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o
+.PHONY : src/Texturize.cpp.o
+
+src/Texturize.i: src/Texturize.cpp.i
+.PHONY : src/Texturize.i
+
+# target to preprocess a source file
+src/Texturize.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Texturize.cpp.i
+.PHONY : src/Texturize.cpp.i
+
+src/Texturize.s: src/Texturize.cpp.s
+.PHONY : src/Texturize.s
+
+# target to generate assembly for a file
+src/Texturize.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Texturize.cpp.s
+.PHONY : src/Texturize.cpp.s
+
 src/World.o: src/World.cpp.o
 .PHONY : src/World.o
 
@@ -423,6 +447,9 @@ help:
 	@echo "... src/Sprite.o"
 	@echo "... src/Sprite.i"
 	@echo "... src/Sprite.s"
+	@echo "... src/Texturize.o"
+	@echo "... src/Texturize.i"
+	@echo "... src/Texturize.s"
 	@echo "... src/World.o"
 	@echo "... src/World.i"
 	@echo "... src/World.s"

@@ -4,6 +4,7 @@
 #include "Config.h"
 #include <cstdlib>
 #include <algorithm>
+#include <cmath>
 
 void Texturize::apply(World* world, WorldChunk* chunk, ParticleType targetType, const TextureParams& params) {
     if (!world || !chunk) return;
@@ -152,6 +153,114 @@ void Texturize::applyBrickTexture(World* world, WorldChunk* chunk) {
                      }
                 }
                 // Else: brick with no border (majority) - do nothing to the color
+            }
+        }
+    }
+}
+
+void Texturize::applyRockBorders(World* world, WorldChunk* chunk) {
+    if (!world || !chunk) return;
+
+    const Config& config = world->getConfig();
+    if (!config.rock.borderEnabled) return;
+
+    int chunkWorldX = chunk->getWorldX();
+    int chunkWorldY = chunk->getWorldY();
+    int borderWidth = config.rock.borderWidth;
+
+    // Build a distance map for each pixel to the nearest non-rock edge
+    // Using a simple approach: for each rock pixel, find min distance to non-rock
+    std::vector<std::vector<float>> distanceMap(WorldChunk::CHUNK_SIZE,
+        std::vector<float>(WorldChunk::CHUNK_SIZE, static_cast<float>(borderWidth + 1)));
+
+    // For each rock pixel in this chunk, calculate distance to nearest non-rock
+    for (int y = 0; y < WorldChunk::CHUNK_SIZE; ++y) {
+        for (int x = 0; x < WorldChunk::CHUNK_SIZE; ++x) {
+            int worldX = chunkWorldX + x;
+            int worldY = chunkWorldY + y;
+
+            if (world->getParticle(worldX, worldY) != ParticleType::ROCK) {
+                distanceMap[y][x] = 0.0f; // Not rock, distance is 0
+                continue;
+            }
+
+            // Search in a square around this pixel for non-rock
+            float minDist = static_cast<float>(borderWidth + 1);
+            for (int dy = -borderWidth; dy <= borderWidth; ++dy) {
+                for (int dx = -borderWidth; dx <= borderWidth; ++dx) {
+                    int checkX = worldX + dx;
+                    int checkY = worldY + dy;
+
+                    bool isNonRock = !world->inWorldBounds(checkX, checkY) ||
+                                     world->getParticle(checkX, checkY) != ParticleType::ROCK;
+
+                    if (isNonRock) {
+                        float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
+                        minDist = std::min(minDist, dist);
+                    }
+                }
+            }
+            distanceMap[y][x] = minDist;
+        }
+    }
+
+    // Apply gradient and pattern based on distance
+    float outerMult = config.rock.borderGradientOuterEdgeColorMultiplier;
+    float innerMult = config.rock.borderGradientInnerEdgeColorMultiplier;
+    bool isDotted = (config.rock.borderPattern == "dotted");
+    int dotWidth = config.rock.borderPatternDottedDotWidth;
+    int dotHeight = config.rock.borderPatternDottedDotHeight;
+    int dotSpacing = config.rock.borderPatternDottedSpacing;
+
+    for (int y = 0; y < WorldChunk::CHUNK_SIZE; ++y) {
+        for (int x = 0; x < WorldChunk::CHUNK_SIZE; ++x) {
+            int worldX = chunkWorldX + x;
+            int worldY = chunkWorldY + y;
+
+            if (world->getParticle(worldX, worldY) != ParticleType::ROCK) {
+                continue;
+            }
+
+            float dist = distanceMap[y][x];
+
+            // Skip if outside border width
+            if (dist > static_cast<float>(borderWidth)) {
+                continue;
+            }
+
+            // Calculate gradient factor (0.0 at edge, 1.0 at inner border)
+            float t = dist / static_cast<float>(borderWidth);
+            t = std::max(0.0f, std::min(1.0f, t)); // Clamp to [0, 1]
+
+            // Smooth gradient interpolation (ease-in-out for nicer shadow)
+            float smoothT = t * t * (3.0f - 2.0f * t);
+
+            // Interpolate color multiplier from outer to inner
+            float colorMult = outerMult + (innerMult - outerMult) * smoothT;
+
+            // Apply pattern on top of gradient
+            bool applyPattern = true;
+            if (isDotted) {
+                // Create dotted pattern based on world coordinates
+                int patternPeriodX = dotWidth + dotSpacing;
+                int patternPeriodY = dotHeight + dotSpacing;
+                int posInPatternX = ((worldX % patternPeriodX) + patternPeriodX) % patternPeriodX;
+                int posInPatternY = ((worldY % patternPeriodY) + patternPeriodY) % patternPeriodY;
+
+                // Only draw dot if within dot bounds
+                applyPattern = (posInPatternX < dotWidth && posInPatternY < dotHeight);
+            }
+
+            if (applyPattern) {
+                ParticleColor color = world->getColor(worldX, worldY);
+                world->setColor(worldX, worldY, {
+                    static_cast<unsigned char>(std::max(0.0f, std::min(255.0f,
+                        static_cast<float>(color.r) * colorMult))),
+                    static_cast<unsigned char>(std::max(0.0f, std::min(255.0f,
+                        static_cast<float>(color.g) * colorMult))),
+                    static_cast<unsigned char>(std::max(0.0f, std::min(255.0f,
+                        static_cast<float>(color.b) * colorMult)))
+                });
             }
         }
     }

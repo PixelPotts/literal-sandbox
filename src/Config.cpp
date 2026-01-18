@@ -9,7 +9,7 @@ Config::Config() {
 
 void Config::setDefaults() {
     windowWidth = 1000;
-    windowHeight = 1000;
+    windowHeight = 512;
     pixelScale = 1;
     fallSpeed = 100;
     processLeftToRight = true;
@@ -125,11 +125,11 @@ void Config::setDefaults() {
     rock.thermalConductivity = 0.5f;     // Decent conductor
     rock.maxSaturation = 0.0f;           // Rock doesn't absorb water
     rock.innerRockSpawnChance = 100;
-    rock.innerRockMinSize = 3;
-    rock.innerRockMaxSize = 7;
+    rock.innerRockMinSize = 2;
+    rock.innerRockMaxSize = 9;
     rock.innerRockMinRadius = 1.0f;
     rock.innerRockMaxRadius = 2.5f;
-    rock.innerRockDarkness = 0.8f;
+    rock.innerRockDarkness = 0.84f;
 
     rock.brickTextureEnabled = true;
     rock.brickWidth = 16;
@@ -137,14 +137,23 @@ void Config::setDefaults() {
     rock.mortarSize = 1;
     rock.darkBrickChance = 0.1f;
     rock.lightBrickChance = 0.05f;
-    rock.borderedBrickChance = 0.5f;
+    rock.borderedBrickChance = 0.0f;
     rock.thickBorderBrickChance = 0.1f;
-    rock.longLineChance = 0.02f;
+    rock.longLineChance = 0.0f;
     rock.overallSparsity = 0.7f;
-    rock.mortarColorMultiplier = 0.4f;
+    rock.mortarColorMultiplier = 0.8f;
     rock.darkBrickColorMultiplier = 0.6f;
     rock.lightBrickColorMultiplier = 1.1f;
     rock.brickOutlineColorMultiplier = 0.5f;
+
+    rock.borderEnabled = true;
+    rock.borderWidth = 3;
+    rock.borderGradientOuterEdgeColorMultiplier = 0.6f;
+    rock.borderGradientInnerEdgeColorMultiplier = 0.9f;
+    rock.borderPattern = "";
+    rock.borderPatternDottedDotWidth = 2;
+    rock.borderPatternDottedDotHeight = 2;
+    rock.borderPatternDottedSpacing = 2;
 
 
 

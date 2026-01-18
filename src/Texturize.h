@@ -18,4 +18,5 @@ class Texturize {
 public:
     void apply(World* world, WorldChunk* chunk, ParticleType targetType, const TextureParams& params);
     void applyBrickTexture(World* world, WorldChunk* chunk);
+    void applyRockBorders(World* world, WorldChunk* chunk);
 };

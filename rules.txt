@@ -136,7 +136,8 @@ rock_thermal_conductivity = 0.5 # Heat transfer rate 0.0-1.0 (decent conductor)
 
 # Brick texture settings for rock
 rock_brick_texture_enabled = true
-rock_overall_sparsity = 0.8
+rock_overall_sparsity = 0.5
+rock_partial_brick_chance = 0.3
 rock_brick_width = 16
 rock_brick_height = 8
 rock_mortar_size = 1
@@ -146,7 +147,7 @@ rock_dark_brick_color_multiplier = 0.6
 rock_light_brick_chance = 0.05
 rock_light_brick_color_multiplier = 1.1
 rock_bordered_brick_chance = 0.3
-rock_thick_border_brick_chance = 0.05
+rock_thick_border_brick_chance = 0.0
 rock_long_line_chance = 0.01
 rock_brick_outline_color_multiplier = 0.5
 

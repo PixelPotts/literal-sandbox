@@ -1,6 +1,7 @@
-CMakeFiles/sand_simulator.dir/src/World.cpp.o: \
- /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/World.cpp \
+CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o: \
+ /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Texturize.cpp \
  /usr/include/stdc-predef.h \
+ /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Texturize.h \
  /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/World.h \
  /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/SandSimulator.h \
  /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Config.h \
@@ -338,22 +339,4 @@ CMakeFiles/sand_simulator.dir/src/World.cpp.o: \
  /usr/include/c++/13/bits/stl_heap.h \
  /usr/include/c++/13/bits/uniform_int_dist.h \
  /usr/include/c++/13/algorithm \
- /usr/include/c++/13/pstl/glue_algorithm_defs.h \
- /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Texturize.h \
- /usr/include/c++/13/iostream /usr/include/c++/13/ostream \
- /usr/include/c++/13/ios /usr/include/c++/13/bits/ios_base.h \
- /usr/include/c++/13/bits/locale_classes.h \
- /usr/include/c++/13/bits/locale_classes.tcc \
- /usr/include/c++/13/system_error /usr/include/c++/13/stdexcept \
- /usr/include/c++/13/streambuf /usr/include/c++/13/bits/streambuf.tcc \
- /usr/include/c++/13/bits/basic_ios.h \
- /usr/include/c++/13/bits/locale_facets.h /usr/include/c++/13/cwctype \
- /usr/include/wctype.h /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
- /usr/include/x86_64-linux-gnu/c++/13/bits/ctype_base.h \
- /usr/include/c++/13/bits/streambuf_iterator.h \
- /usr/include/x86_64-linux-gnu/c++/13/bits/ctype_inline.h \
- /usr/include/c++/13/bits/locale_facets.tcc \
- /usr/include/c++/13/bits/basic_ios.tcc \
- /usr/include/c++/13/bits/ostream.tcc /usr/include/c++/13/istream \
- /usr/include/c++/13/bits/istream.tcc /usr/include/c++/13/chrono \
- /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/stb_image.h
+ /usr/include/c++/13/pstl/glue_algorithm_defs.h

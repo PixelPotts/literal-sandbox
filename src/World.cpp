@@ -96,6 +96,19 @@ WorldChunk* World::getChunk(int chunkX, int chunkY) {
     // Apply rock texture
     texturizer.applyBrickTexture(this, ptr);
 
+    // Apply rock borders (gradient + pattern on edges)
+    texturizer.applyRockBorders(this, ptr);
+
+    // Apply inner rock texture for ROCK
+    TextureParams rockParams;
+    rockParams.spawnChance = (config.rock.innerRockSpawnChance > 0) ? 1.0f / config.rock.innerRockSpawnChance : 0.0f;
+    rockParams.minPatchSize = config.rock.innerRockMinSize;
+    rockParams.maxPatchSize = config.rock.innerRockMaxSize;
+    rockParams.minPatchRadius = config.rock.innerRockMinRadius;
+    rockParams.maxPatchRadius = config.rock.innerRockMaxRadius;
+    rockParams.colorMultiplier = config.rock.innerRockDarkness;
+    texturizer.apply(this, ptr, ParticleType::ROCK, rockParams);
+
     // Apply obsidian texture
     TextureParams obsidianParams;
     obsidianParams.spawnChance = (config.obsidian.innerRockSpawnChance > 0) ? 1.0f / config.obsidian.innerRockSpawnChance : 0.0f;

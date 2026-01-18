@@ -209,10 +209,24 @@ CMakeFiles/sand_simulator.dir/src/Bullet.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/sand_simulator.dir/src/Bullet.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Bullet.cpp -o CMakeFiles/sand_simulator.dir/src/Bullet.cpp.s
 
+CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o: CMakeFiles/sand_simulator.dir/flags.make
+CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o: /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Texturize.cpp
+CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o: CMakeFiles/sand_simulator.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o -MF CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o.d -o CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o -c /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Texturize.cpp
+
+CMakeFiles/sand_simulator.dir/src/Texturize.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/sand_simulator.dir/src/Texturize.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Texturize.cpp > CMakeFiles/sand_simulator.dir/src/Texturize.cpp.i
+
+CMakeFiles/sand_simulator.dir/src/Texturize.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/sand_simulator.dir/src/Texturize.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Texturize.cpp -o CMakeFiles/sand_simulator.dir/src/Texturize.cpp.s
+
 CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o: CMakeFiles/sand_simulator.dir/flags.make
 CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o: /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/stb_image_impl.cpp
 CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o: CMakeFiles/sand_simulator.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o -MF CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o.d -o CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o -c /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/stb_image_impl.cpp
 
 CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.i: cmake_force
@@ -235,6 +249,7 @@ sand_simulator_OBJECTS = \
 "CMakeFiles/sand_simulator.dir/src/Collectible.cpp.o" \
 "CMakeFiles/sand_simulator.dir/src/Gun.cpp.o" \
 "CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o" \
+"CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o" \
 "CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o"
 
 # External object files for target sand_simulator
@@ -250,6 +265,7 @@ sand_simulator: CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o
 sand_simulator: CMakeFiles/sand_simulator.dir/src/Collectible.cpp.o
 sand_simulator: CMakeFiles/sand_simulator.dir/src/Gun.cpp.o
 sand_simulator: CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o
+sand_simulator: CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o
 sand_simulator: CMakeFiles/sand_simulator.dir/src/stb_image_impl.cpp.o
 sand_simulator: CMakeFiles/sand_simulator.dir/build.make
 sand_simulator: /usr/lib/x86_64-linux-gnu/libSDL2.so
@@ -257,7 +273,7 @@ sand_simulator: /usr/lib/x86_64-linux-gnu/libSDL2_ttf.so
 sand_simulator: /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so
 sand_simulator: /usr/lib/x86_64-linux-gnu/libpthread.a
 sand_simulator: CMakeFiles/sand_simulator.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Linking CXX executable sand_simulator"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/mnt/1tb-ssd/EverythingExplodes/sand-simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Linking CXX executable sand_simulator"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/sand_simulator.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
