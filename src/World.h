@@ -140,6 +140,12 @@ struct ChunkKeyHash {
     }
 };
 
+struct ParticleChunk {
+    bool isAwake = true;
+    int stableFrames = 0;
+};
+
+
 class World {
 public:
     // World size in chunks (70x70 = 35,840 x 35,840 pixels)
@@ -148,9 +154,16 @@ public:
     static constexpr int WORLD_WIDTH = WORLD_CHUNKS_X * WorldChunk::CHUNK_SIZE;   // 35,840
     static constexpr int WORLD_HEIGHT = WORLD_CHUNKS_Y * WorldChunk::CHUNK_SIZE;  // 35,840
 
+    // Particle chunk properties
+    static constexpr int PARTICLE_CHUNK_WIDTH = 50;
+    static constexpr int PARTICLE_CHUNK_HEIGHT = 100;
+    static constexpr int P_CHUNKS_X = (WORLD_WIDTH + PARTICLE_CHUNK_WIDTH - 1) / PARTICLE_CHUNK_WIDTH;
+    static constexpr int P_CHUNKS_Y = (WORLD_HEIGHT + PARTICLE_CHUNK_HEIGHT - 1) / PARTICLE_CHUNK_HEIGHT;
+    static constexpr int P_CHUNK_FRAMES_UNTIL_SLEEP = 15;
+
+
     // How many chunks around the camera to keep loaded/active
     static constexpr int LOAD_RADIUS = 3;      // Load chunks within this radius
-    static constexpr int SIMULATE_RADIUS = 2;  // Only simulate chunks within this radius
 
     World(const Config& config);
     ~World();  // Need destructor to free scene image
@@ -188,6 +201,8 @@ public:
     static void worldToChunk(int worldX, int worldY, int& chunkX, int& chunkY);
     static void worldToLocal(int worldX, int worldY, int& localX, int& localY);
     static void chunkToWorld(int chunkX, int chunkY, int& worldX, int& worldY);
+    static void worldToParticleChunk(int worldX, int worldY, int& pcX, int& pcY);
+
 
     bool inWorldBounds(int worldX, int worldY) const;
 
@@ -214,6 +229,10 @@ public:
     void removeSceneObject(SceneObject* obj);
     const std::vector<std::shared_ptr<SceneObject>>& getSceneObjects() const { return sceneObjects; }
 
+    const std::unordered_map<ChunkKey, std::unique_ptr<WorldChunk>, ChunkKeyHash>& getChunks() const { return chunks; }
+
+    const std::vector<ParticleChunk>& getParticleChunks() const { return particleChunks; }
+
     // Check if a world position is blocked by a scene object
     bool isBlockedBySceneObject(int worldX, int worldY) const;
 
@@ -234,11 +253,14 @@ private:
     // Loaded chunks (sparse storage - only chunks that exist are stored)
     std::unordered_map<ChunkKey, std::unique_ptr<WorldChunk>, ChunkKeyHash> chunks;
 
+    // Particle chunk management for sleeping
+    std::vector<ParticleChunk> particleChunks;
+    std::vector<bool> particleChunkActivity;
+
     // Scene objects (non-particle entities)
     std::vector<std::shared_ptr<SceneObject>> sceneObjects;
 
     // Simulation helpers
-    void updateChunk(WorldChunk* chunk, float deltaTime);
     void updateParticle(int worldX, int worldY);
 
     // Particle physics (simplified versions that work across chunks)
@@ -272,6 +294,5 @@ private:
 
     void populateChunkFromScene(WorldChunk* chunk);
     void procedurallyGenerateMoss(WorldChunk* chunk);
-    void procedurallyGenerateInnerRocks(WorldChunk* chunk);
     float getMaxSaturation(ParticleType type) const;
 };

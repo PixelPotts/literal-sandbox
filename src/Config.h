@@ -52,6 +52,23 @@ struct ParticleTypeConfig {
     float innerRockMaxRadius;
     float innerRockDarkness;
 
+    // Brick Texture
+    bool brickTextureEnabled;
+    int brickWidth;
+    int brickHeight;
+    int mortarSize;
+    float darkBrickChance;
+    float lightBrickChance;
+    float borderedBrickChance;
+    float thickBorderBrickChance;
+    float longLineChance;
+    float overallSparsity;
+    float mortarColorMultiplier;
+    float darkBrickColorMultiplier;
+    float lightBrickColorMultiplier;
+    float brickOutlineColorMultiplier;
+
+
     // Visual effects
     bool edgeBrightening;
     float edgeBrighteningAmount;

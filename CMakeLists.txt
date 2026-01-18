@@ -30,6 +30,7 @@ set(SOURCES
     src/Collectible.cpp
     src/Gun.cpp
     src/Bullet.cpp
+    src/Texturize.cpp
     src/stb_image_impl.cpp
 )
 

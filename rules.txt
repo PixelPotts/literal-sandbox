@@ -8,7 +8,7 @@
 window_width = 400            # Window width in SCREEN PIXELS (not grid cells)
 window_height = 400           # Window height in SCREEN PIXELS
 pixel_scale = 1                # Size of each particle in pixels (grid size = window / pixel_scale)
-fall_speed = 10                # Simulation steps per frame (higher = faster)
+fall_speed = 1                # Simulation steps per frame (higher = faster)
 process_left_to_right = true   # Processing order: true = left to right, false = right to left
 
 # ============================================
@@ -132,7 +132,24 @@ rock_spacing_push_distance = 1  # How many cells away to push neighbors when exp
 rock_base_temperature = 20.0   # Starting temperature in Celsius
 rock_boiling_point = 10000.0   # Temperature to convert to gas (very high = never boils)
 rock_heat_capacity = 0.8       # Energy needed to change temp
-rock_thermal_conductivity = 0.4 # Heat transfer rate 0.0-1.0 (decent conductor)
+rock_thermal_conductivity = 0.5 # Heat transfer rate 0.0-1.0 (decent conductor)
+
+# Brick texture settings for rock
+rock_brick_texture_enabled = true
+rock_overall_sparsity = 0.8
+rock_brick_width = 16
+rock_brick_height = 8
+rock_mortar_size = 1
+rock_mortar_color_multiplier = 0.4
+rock_dark_brick_chance = 0.1
+rock_dark_brick_color_multiplier = 0.6
+rock_light_brick_chance = 0.05
+rock_light_brick_color_multiplier = 1.1
+rock_bordered_brick_chance = 0.3
+rock_thick_border_brick_chance = 0.05
+rock_long_line_chance = 0.01
+rock_brick_outline_color_multiplier = 0.5
+
 
 # ============================================
 # LAVA PARTICLE SETTINGS

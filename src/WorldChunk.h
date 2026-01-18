@@ -118,3 +118,4 @@ private:
         return localY * CHUNK_SIZE + localX;
     }
 };
+

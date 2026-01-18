@@ -382,6 +382,9 @@ int main(int argc, char* argv[]) {
     int targetFPS = fpsValues[fpsDropdown.selectedIndex];
     int frameDelay = 1000 / targetFPS;
 
+    float last_sim_time = 0;
+    float last_render_time = 0;
+
     // Movement state
     bool moveLeft = false, moveRight = false;
     bool shiftHeld = false;
@@ -738,9 +741,11 @@ int main(int argc, char* argv[]) {
         }
 
         // Update world simulation
+        Uint32 simulation_start = SDL_GetTicks();
         for (int i = 0; i < config.fallSpeed; ++i) {
             world.update(deltaTime / config.fallSpeed);
         }
+        last_sim_time = SDL_GetTicks() - simulation_start;
 
         // Update and check collectibles
         float playerW = (float)playerSprite->getWidth();
@@ -772,196 +777,683 @@ int main(int argc, char* argv[]) {
             equippedGun->updateEquipped(playerCenterX, playerCenterY, cursorWorldX, cursorWorldY);
         }
 
-        // Ensure OpenGL context is current
-        if (SDL_GL_MakeCurrent(window, glContext) < 0) {
-            static bool logged = false;
-            if (!logged) {
-                std::cerr << "SDL_GL_MakeCurrent failed in loop: " << SDL_GetError() << "\n";
-                logged = true;
-            }
-        }
+                // Ensure OpenGL context is current
 
-        // Clear screen to black
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
+                if (SDL_GL_MakeCurrent(window, glContext) < 0) {
 
-        // Fill pixel buffer with visible particles
-        int visStartX, visStartY, visEndX, visEndY;
-        world.getVisibleRegion(visStartX, visStartY, visEndX, visEndY);
+                    static bool logged = false;
 
-        for (int y = 0; y < viewportHeight; ++y) {
-            for (int x = 0; x < viewportWidth; ++x) {
-                int worldX = (int)cam.x + x;
-                int worldY = (int)cam.y + y;
-                int idx = y * viewportWidth + x;
+                    if (!logged) {
 
-                if (world.isOccupied(worldX, worldY)) {
-                    ParticleColor color = world.getColor(worldX, worldY);
-                    pixels[idx] = (color.r << 16) | (color.g << 8) | color.b;
-                } else {
-                    if (worldX >= 0 && worldX < World::WORLD_WIDTH &&
-                        worldY >= 0 && worldY < World::WORLD_HEIGHT) { // Corrected condition
-                        pixels[idx] = 0x000010;  // Very dark blue
-                    } else {
-                        pixels[idx] = 0x200000;  // Dark red for outside world
+                        std::cerr << "SDL_GL_MakeCurrent failed in loop: " << SDL_GetError() << "\n";
+
+                        logged = true;
+
                     }
+
                 }
 
+        
 
-            }
-        }
+                Uint32 rendering_start = SDL_GetTicks();
 
+        
 
+                // Clear screen to black
 
-        // Draw bullets
-        for (auto& bullet : bullets) {
-            bullet.draw(pixels, viewportWidth, viewportHeight, cam.x, cam.y, renderer);
-        }
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
-        // Update texture
-        SDL_UpdateTexture(viewportTexture, nullptr, pixels.data(), viewportWidth * sizeof(Uint32));
+                SDL_RenderClear(renderer);
 
-        // Render texture to screen
-        SDL_RenderCopy(renderer, viewportTexture, nullptr, nullptr);
+        
 
-        // Draw fire effects
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
-        for (int y = 0; y < viewportHeight; ++y) {
-            for (int x = 0; x < viewportWidth; ++x) {
-                int worldX = (int)cam.x + x;
-                int worldY = (int)cam.y + y;
+                // --- Optimized particle rendering ---
 
-                if (world.getParticle(worldX, worldY) == ParticleType::FIRE) {
-                    ParticleColor fireColor = world.getColor(worldX, worldY);
+                int visWorldX_start = (int)cam.x;
 
-                    for (int dy = -3; dy <= 0; ++dy) {
-                        int screenY = y + dy;
-                        if (screenY >= 0 && screenY < viewportHeight) {
-                            float intensity = 1.0f - (float)(-dy) / 4.0f;
-                            int alpha = (int)(intensity * 120);
+                int visWorldY_start = (int)cam.y;
 
-                            SDL_Rect flameRect = {x, screenY, 1, 1};
-                            SDL_SetRenderDrawColor(renderer,
-                                (int)(fireColor.r * intensity),
-                                (int)(fireColor.g * intensity * 0.7f),
-                                0, alpha);
-                            SDL_RenderFillRect(renderer, &flameRect);
+                int visWorldX_end = visWorldX_start + viewportWidth;
+
+                int visWorldY_end = visWorldY_start + viewportHeight;
+
+        
+
+                int startChunkX, startChunkY, endChunkX, endChunkY;
+
+                World::worldToChunk(visWorldX_start, visWorldY_start, startChunkX, startChunkY);
+
+                World::worldToChunk(visWorldX_end - 1, visWorldY_end - 1, endChunkX, endChunkY);
+
+        
+
+                std::fill(pixels.begin(), pixels.end(), 0x000010);
+
+        
+
+                for (int cy = startChunkY; cy <= endChunkY; ++cy) {
+
+                    for (int cx = startChunkX; cx <= endChunkX; ++cx) {
+
+                        const WorldChunk* chunk = world.getChunk(cx, cy);
+
+                        if (!chunk) continue;
+
+        
+
+                        const auto& colors = chunk->getColorGrid();
+
+                        const auto& particles = chunk->getParticleGrid();
+
+                        int chunkWorldX = chunk->getWorldX();
+
+                        int chunkWorldY = chunk->getWorldY();
+
+        
+
+                        int loop_x_start = std::max(visWorldX_start, chunkWorldX);
+
+                        int loop_y_start = std::max(visWorldY_start, chunkWorldY);
+
+                        int loop_x_end = std::min(visWorldX_end, chunkWorldX + WorldChunk::CHUNK_SIZE);
+
+                        int loop_y_end = std::min(visWorldY_end, chunkWorldY + WorldChunk::CHUNK_SIZE);
+
+        
+
+                        for (int worldY = loop_y_start; worldY < loop_y_end; ++worldY) {
+
+                            int screenY = worldY - visWorldY_start;
+
+                            int localY = worldY - chunkWorldY;
+
+                            int pixel_idx_base = screenY * viewportWidth;
+
+                            int chunk_idx_base = localY * WorldChunk::CHUNK_SIZE;
+
+        
+
+                            for (int worldX = loop_x_start; worldX < loop_x_end; ++worldX) {
+
+                                int screenX = worldX - visWorldX_start;
+
+                                int localX = worldX - chunkWorldX;
+
+        
+
+                                int chunk_idx = chunk_idx_base + localX;
+
+                                if (particles[chunk_idx] != ParticleType::EMPTY) {
+
+                                    const auto& color = colors[chunk_idx];
+
+                                    pixels[pixel_idx_base + screenX] = (color.r << 16) | (color.g << 8) | color.b;
+
+                                }
+
+                            }
+
                         }
+
                     }
+
                 }
-            }
-        }
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 
-        // Render scene objects (sprites)
-        for (const auto& obj : world.getSceneObjects()) {
-            if (!obj || !obj->isVisible()) continue;
+        
 
-            Sprite* spr = obj->getSprite();
-            if (!spr || !spr->isLoaded()) continue;
+        
 
-            int screenX = (int)((obj->getX() - cam.x) * scaleX);
-            int screenY = (int)((obj->getY() - cam.y) * scaleY);
-            int screenW = (int)(spr->getWidth() * scaleX);
-            int screenH = (int)(spr->getHeight() * scaleY);
+                // Draw bullets
 
-            SDL_Texture* tex = spr->getTexture();
-            SDL_Rect dstRect = {screenX, screenY, screenW, screenH};
-            SDL_RenderCopy(renderer, tex, nullptr, &dstRect);
-        }
+                for (auto& bullet : bullets) {
 
-        // Render collectible explosion particles
-        for (auto& collectible : collectibles) {
-            collectible->render(renderer, cam.x, cam.y, scaleX, scaleY);
-        }
+                    bullet.draw(pixels, viewportWidth, viewportHeight, cam.x, cam.y, renderer);
 
-        // Render equipped gun
-        if (equippedGun && equippedGun->isEquipped()) {
-            equippedGun->renderEquipped(renderer, cam.x, cam.y, scaleX, scaleY);
-        }
+                }
 
-        // Draw player colliders (disabled)
-        // const auto& p_box = player->getCollider();
+        
 
-        // Draw UI
-        drawDropdown(renderer, font, dropdown);
-        drawDropdown(renderer, font, volumeDropdown);
-        drawDropdown(renderer, font, fpsDropdown);
+                // Update texture
 
-        // Update FPS counter
-        frameCount++;
-        Uint32 currentTime = SDL_GetTicks();
-        if (currentTime - fpsTimer >= 1000) {
-            currentFPS = frameCount / ((currentTime - fpsTimer) / 1000.0f);
-            frameCount = 0;
-            fpsTimer = currentTime;
-        }
+                SDL_UpdateTexture(viewportTexture, nullptr, pixels.data(), viewportWidth * sizeof(Uint32));
 
-        // Draw stats
-        SDL_Color whiteColor = {255, 255, 255, 255};
-        std::string fpsText = "FPS: " + std::to_string((int)currentFPS);
-        drawCachedText(renderer, smallFont, fpsCache, fpsText, 5, displayMode.h - 15, whiteColor);
+        
 
-        float playerCenterX = player->getX() + playerSprite->getWidth() / 2.0f;
-        float playerCenterY = player->getY() + playerSprite->getHeight() / 2.0f;
-        std::string posText = "Pos: " + std::to_string((int)playerCenterX) + ", " + std::to_string((int)playerCenterY);
-        drawCachedText(renderer, smallFont, posCache, posText, 5, displayMode.h - 30, whiteColor);
+                // Render texture to screen
 
-        // Draw particle counts
-        int yOffset = 5;
-        int xPos = displayMode.w - 100;
+                SDL_RenderCopy(renderer, viewportTexture, nullptr, nullptr);
 
-        int sandCount = world.getParticleCount(ParticleType::SAND);
-        int waterCount = world.getParticleCount(ParticleType::WATER);
-        int rockCount = world.getParticleCount(ParticleType::ROCK);
-        int lavaCount = world.getParticleCount(ParticleType::LAVA);
-        int steamCount = world.getParticleCount(ParticleType::STEAM);
-        int fireCount = world.getParticleCount(ParticleType::FIRE);
-        int obsidianCount = world.getParticleCount(ParticleType::OBSIDIAN);
-        int iceCount = world.getParticleCount(ParticleType::ICE);
-        int glassCount = world.getParticleCount(ParticleType::GLASS);
+        
 
-        SDL_Color sandColor = {255, 200, 100, 255};
-        drawCachedText(renderer, smallFont, sandCountCache, "Sand: " + std::to_string(sandCount), xPos, yOffset, sandColor);
-        yOffset += 12;
+                // Draw fire effects
 
-        SDL_Color waterColor = {50, 100, 255, 255};
-        drawCachedText(renderer, smallFont, waterCountCache, "Water: " + std::to_string(waterCount), xPos, yOffset, waterColor);
-        yOffset += 12;
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_ADD);
 
-        SDL_Color rockColor = {128, 128, 128, 255};
-        drawCachedText(renderer, smallFont, rockCountCache, "Rock: " + std::to_string(rockCount), xPos, yOffset, rockColor);
-        yOffset += 12;
+                for (int y = 0; y < viewportHeight; ++y) {
 
-        SDL_Color lavaColor = {255, 100, 0, 255};
-        drawCachedText(renderer, smallFont, lavaCountCache, "Lava: " + std::to_string(lavaCount), xPos, yOffset, lavaColor);
-        yOffset += 12;
+                    for (int x = 0; x < viewportWidth; ++x) {
 
-        SDL_Color steamColor = {200, 200, 200, 255};
-        drawCachedText(renderer, smallFont, steamCountCache, "Steam: " + std::to_string(steamCount), xPos, yOffset, steamColor);
-        yOffset += 12;
+                        int worldX = (int)cam.x + x;
 
-        SDL_Color fireColor = {255, 100, 0, 255};
-        drawCachedText(renderer, smallFont, fireCountCache, "Fire: " + std::to_string(fireCount), xPos, yOffset, fireColor);
-        yOffset += 12;
+                        int worldY = (int)cam.y + y;
 
-        SDL_Color obsidianColor = {100, 90, 110, 255};
-        drawCachedText(renderer, smallFont, obsidianCountCache, "Obsidian: " + std::to_string(obsidianCount), xPos, yOffset, obsidianColor);
-        yOffset += 12;
+        
 
-        SDL_Color iceColor = {200, 230, 255, 255};
-        drawCachedText(renderer, smallFont, iceCountCache, "Ice: " + std::to_string(iceCount), xPos, yOffset, iceColor);
-        yOffset += 12;
+                        if (world.getParticle(worldX, worldY) == ParticleType::FIRE) {
 
-        SDL_Color glassColor = {100, 180, 180, 255};
-        drawCachedText(renderer, smallFont, glassCountCache, "Glass: " + std::to_string(glassCount), xPos, yOffset, glassColor);
-        yOffset += 12;
+                            ParticleColor fireColor = world.getColor(worldX, worldY);
 
-        // Draw controls hint
-        SDL_Color hintColor = {150, 150, 150, 255};
-        drawText(renderer, smallFont, "WASD to move, Shift for fast", 5, displayMode.h - 45, hintColor);
+        
 
-        SDL_RenderPresent(renderer);
+                            for (int dy = -3; dy <= 0; ++dy) {
+
+                                int screenY = y + dy;
+
+                                if (screenY >= 0 && screenY < viewportHeight) {
+
+                                    float intensity = 1.0f - (float)(-dy) / 4.0f;
+
+                                    int alpha = (int)(intensity * 120);
+
+        
+
+                                    SDL_Rect flameRect = {x, screenY, 1, 1};
+
+                                    SDL_SetRenderDrawColor(renderer,
+
+                                        (int)(fireColor.r * intensity),
+
+                                        (int)(fireColor.g * intensity * 0.7f),
+
+                                        0, alpha);
+
+                                    SDL_RenderFillRect(renderer, &flameRect);
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+
+        
+
+                // Render scene objects (sprites)
+
+                for (const auto& obj : world.getSceneObjects()) {
+
+                    if (!obj || !obj->isVisible()) continue;
+
+        
+
+                    Sprite* spr = obj->getSprite();
+
+                    if (!spr || !spr->isLoaded()) continue;
+
+        
+
+                    int screenX = (int)((obj->getX() - cam.x) * scaleX);
+
+                    int screenY = (int)((obj->getY() - cam.y) * scaleY);
+
+                    int screenW = (int)(spr->getWidth() * scaleX);
+
+                    int screenH = (int)(spr->getHeight() * scaleY);
+
+        
+
+                    SDL_Texture* tex = spr->getTexture();
+
+                    SDL_Rect dstRect = {screenX, screenY, screenW, screenH};
+
+                    SDL_RenderCopy(renderer, tex, nullptr, &dstRect);
+
+                }
+
+        
+
+                // Render collectible explosion particles
+
+                for (auto& collectible : collectibles) {
+
+                    collectible->render(renderer, cam.x, cam.y, scaleX, scaleY);
+
+                }
+
+        
+
+                // Render equipped gun
+
+                if (equippedGun && equippedGun->isEquipped()) {
+
+                    equippedGun->renderEquipped(renderer, cam.x, cam.y, scaleX, scaleY);
+
+                }
+
+        
+
+                        // Draw outlines for awake chunks
+
+        
+
+                        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+        
+
+                        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 100); // Green, semi-transparent
+
+        
+
+                        const auto& chunks = world.getChunks();
+
+        
+
+                        for (const auto& [key, chunk] : chunks) {
+
+        
+
+                            if (chunk && !chunk->isSleeping()) {
+
+        
+
+                                SDL_Rect chunkRect;
+
+        
+
+                                chunkRect.x = (int)((chunk->getWorldX() - cam.x) * scaleX);
+
+        
+
+                                chunkRect.y = (int)((chunk->getWorldY() - cam.y) * scaleY);
+
+        
+
+                                chunkRect.w = (int)(WorldChunk::CHUNK_SIZE * scaleX);
+
+        
+
+                                chunkRect.h = (int)(WorldChunk::CHUNK_SIZE * scaleY);
+
+        
+
+                                SDL_RenderDrawRect(renderer, &chunkRect);
+
+        
+
+                            }
+
+        
+
+                        }
+
+        
+
+                
+
+        
+
+                                // Draw outlines for awake particle chunks
+
+        
+
+                
+
+        
+
+                                SDL_SetRenderDrawColor(renderer, 255, 0, 0, 100); // Red, semi-transparent
+
+        
+
+                
+
+        
+
+                                int p_visWorldX_start, p_visWorldY_start, p_visWorldX_end, p_visWorldY_end;
+
+        
+
+                
+
+        
+
+                                world.getVisibleRegion(p_visWorldX_start, p_visWorldY_start, p_visWorldX_end, p_visWorldY_end);
+
+        
+
+                
+
+        
+
+                                int startPCX, startPCY, endPCX, endPCY;
+
+        
+
+                
+
+        
+
+                                World::worldToParticleChunk(p_visWorldX_start, p_visWorldY_start, startPCX, startPCY);
+
+        
+
+                
+
+        
+
+                                World::worldToParticleChunk(p_visWorldX_end - 1, p_visWorldY_end - 1, endPCX, endPCY);
+
+        
+
+                
+
+        
+
+                                const auto& particleChunks = world.getParticleChunks();
+
+        
+
+                
+
+        
+
+                                for (int pcY = startPCY; pcY <= endPCY; ++pcY) {
+
+        
+
+                
+
+        
+
+                                    for (int pcX = startPCX; pcX <= endPCX; ++pcX) {
+
+        
+
+                
+
+        
+
+                                        if(pcX < 0 || pcX >= World::P_CHUNKS_X || pcY < 0 || pcY >= World::P_CHUNKS_Y) continue;
+
+        
+
+                
+
+        
+
+                                        int pcIndex = pcY * World::P_CHUNKS_X + pcX;
+
+        
+
+                
+
+        
+
+                                        if (particleChunks[pcIndex].isAwake) {
+
+        
+
+                
+
+        
+
+                                            SDL_Rect rect;
+
+        
+
+                
+
+        
+
+                                            rect.x = (int)((pcX * World::PARTICLE_CHUNK_WIDTH - cam.x) * scaleX);
+
+        
+
+                
+
+        
+
+                                            rect.y = (int)((pcY * World::PARTICLE_CHUNK_HEIGHT - cam.y) * scaleY);
+
+        
+
+                
+
+        
+
+                                            rect.w = (int)(World::PARTICLE_CHUNK_WIDTH * scaleX);
+
+        
+
+                
+
+        
+
+                                            rect.h = (int)(World::PARTICLE_CHUNK_HEIGHT * scaleY);
+
+        
+
+                
+
+        
+
+                                            SDL_RenderDrawRect(renderer, &rect);
+
+        
+
+                
+
+        
+
+                                        }
+
+        
+
+                
+
+        
+
+                                    }
+
+        
+
+                
+
+        
+
+                                }
+
+        
+
+                
+
+        
+
+                        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+
+        
+
+                
+
+        
+
+                        // Draw player colliders (disabled)
+
+        
+
+                        // const auto& p_box = player->getCollider();
+
+        
+
+                // Draw UI
+
+                drawDropdown(renderer, font, dropdown);
+
+                drawDropdown(renderer, font, volumeDropdown);
+
+                drawDropdown(renderer, font, fpsDropdown);
+
+        
+
+                // Update FPS counter
+
+                frameCount++;
+
+                Uint32 currentTime = SDL_GetTicks();
+
+                if (currentTime - fpsTimer >= 1000) {
+
+                    currentFPS = frameCount / ((currentTime - fpsTimer) / 1000.0f);
+
+                    frameCount = 0;
+
+                    fpsTimer = currentTime;
+
+                    std::cout << "Sim: " << last_sim_time << "ms, Render: " << last_render_time << "ms, FPS: " << (int)currentFPS << std::endl;
+
+                }
+
+        
+
+                // Draw stats
+
+                SDL_Color whiteColor = {255, 255, 255, 255};
+
+                std::string fpsText = "FPS: " + std::to_string((int)currentFPS);
+
+                drawCachedText(renderer, smallFont, fpsCache, fpsText, 5, displayMode.h - 15, whiteColor);
+
+        
+
+                float playerCenterX = player->getX() + playerSprite->getWidth() / 2.0f;
+
+                float playerCenterY = player->getY() + playerSprite->getHeight() / 2.0f;
+
+                std::string posText = "Pos: " + std::to_string((int)playerCenterX) + ", " + std::to_string((int)playerCenterY);
+
+                drawCachedText(renderer, smallFont, posCache, posText, 5, displayMode.h - 30, whiteColor);
+
+        
+
+                // Draw particle counts
+
+                int yOffset = 5;
+
+                int xPos = displayMode.w - 100;
+
+        
+
+                int sandCount = world.getParticleCount(ParticleType::SAND);
+
+                int waterCount = world.getParticleCount(ParticleType::WATER);
+
+                int rockCount = world.getParticleCount(ParticleType::ROCK);
+
+                int lavaCount = world.getParticleCount(ParticleType::LAVA);
+
+                int steamCount = world.getParticleCount(ParticleType::STEAM);
+
+                int fireCount = world.getParticleCount(ParticleType::FIRE);
+
+                int obsidianCount = world.getParticleCount(ParticleType::OBSIDIAN);
+
+                int iceCount = world.getParticleCount(ParticleType::ICE);
+
+                int glassCount = world.getParticleCount(ParticleType::GLASS);
+
+        
+
+                SDL_Color sandColor = {255, 200, 100, 255};
+
+                drawCachedText(renderer, smallFont, sandCountCache, "Sand: " + std::to_string(sandCount), xPos, yOffset, sandColor);
+
+                yOffset += 12;
+
+        
+
+                SDL_Color waterColor = {50, 100, 255, 255};
+
+                drawCachedText(renderer, smallFont, waterCountCache, "Water: " + std::to_string(waterCount), xPos, yOffset, waterColor);
+
+                yOffset += 12;
+
+        
+
+                SDL_Color rockColor = {128, 128, 128, 255};
+
+                drawCachedText(renderer, smallFont, rockCountCache, "Rock: " + std::to_string(rockCount), xPos, yOffset, rockColor);
+
+                yOffset += 12;
+
+        
+
+                SDL_Color lavaColor = {255, 100, 0, 255};
+
+                drawCachedText(renderer, smallFont, lavaCountCache, "Lava: " + std::to_string(lavaCount), xPos, yOffset, lavaColor);
+
+                yOffset += 12;
+
+        
+
+                SDL_Color steamColor = {200, 200, 200, 255};
+
+                drawCachedText(renderer, smallFont, steamCountCache, "Steam: " + std::to_string(steamCount), xPos, yOffset, steamColor);
+
+                yOffset += 12;
+
+        
+
+                SDL_Color fireColor = {255, 100, 0, 255};
+
+                drawCachedText(renderer, smallFont, fireCountCache, "Fire: " + std::to_string(fireCount), xPos, yOffset, fireColor);
+
+                yOffset += 12;
+
+        
+
+                SDL_Color obsidianColor = {100, 90, 110, 255};
+
+                drawCachedText(renderer, smallFont, obsidianCountCache, "Obsidian: " + std::to_string(obsidianCount), xPos, yOffset, obsidianColor);
+
+                yOffset += 12;
+
+        
+
+                SDL_Color iceColor = {200, 230, 255, 255};
+
+                drawCachedText(renderer, smallFont, iceCountCache, "Ice: " + std::to_string(iceCount), xPos, yOffset, iceColor);
+
+                yOffset += 12;
+
+        
+
+                SDL_Color glassColor = {100, 180, 180, 255};
+
+                drawCachedText(renderer, smallFont, glassCountCache, "Glass: " + std::to_string(glassCount), xPos, yOffset, glassColor);
+
+                yOffset += 12;
+
+        
+
+                // Draw controls hint
+
+                SDL_Color hintColor = {150, 150, 150, 255};
+
+                drawText(renderer, smallFont, "WASD to move, Shift for fast", 5, displayMode.h - 45, hintColor);
+
+        
+
+                SDL_RenderPresent(renderer);
+
+        
+
+                last_render_time = SDL_GetTicks() - rendering_start;
+
+        
 
         Uint32 frameTime = SDL_GetTicks() - frameStart;
         if (frameDelay > (int)frameTime) {

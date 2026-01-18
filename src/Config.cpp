@@ -131,6 +131,23 @@ void Config::setDefaults() {
     rock.innerRockMaxRadius = 2.5f;
     rock.innerRockDarkness = 0.8f;
 
+    rock.brickTextureEnabled = true;
+    rock.brickWidth = 16;
+    rock.brickHeight = 8;
+    rock.mortarSize = 1;
+    rock.darkBrickChance = 0.1f;
+    rock.lightBrickChance = 0.05f;
+    rock.borderedBrickChance = 0.5f;
+    rock.thickBorderBrickChance = 0.1f;
+    rock.longLineChance = 0.02f;
+    rock.overallSparsity = 0.7f;
+    rock.mortarColorMultiplier = 0.4f;
+    rock.darkBrickColorMultiplier = 0.6f;
+    rock.lightBrickColorMultiplier = 1.1f;
+    rock.brickOutlineColorMultiplier = 0.5f;
+
+
+
     // Lava defaults
     lava.colorR = 255;
     lava.colorG = 100;
@@ -532,6 +549,20 @@ void Config::parseLine(const std::string& line) {
     else if (key == "rock_inner_rock_min_radius") iss >> rock.innerRockMinRadius;
     else if (key == "rock_inner_rock_max_radius") iss >> rock.innerRockMaxRadius;
     else if (key == "rock_inner_rock_darkness") iss >> rock.innerRockDarkness;
+    else if (key == "rock_brick_texture_enabled") { std::string val; iss >> val; rock.brickTextureEnabled = (val == "true"); }
+    else if (key == "rock_brick_width") iss >> rock.brickWidth;
+    else if (key == "rock_brick_height") iss >> rock.brickHeight;
+    else if (key == "rock_mortar_size") iss >> rock.mortarSize;
+    else if (key == "rock_dark_brick_chance") iss >> rock.darkBrickChance;
+    else if (key == "rock_light_brick_chance") iss >> rock.lightBrickChance;
+    else if (key == "rock_bordered_brick_chance") iss >> rock.borderedBrickChance;
+    else if (key == "rock_thick_border_brick_chance") iss >> rock.thickBorderBrickChance;
+    else if (key == "rock_long_line_chance") iss >> rock.longLineChance;
+    else if (key == "rock_overall_sparsity") iss >> rock.overallSparsity;
+    else if (key == "rock_mortar_color_multiplier") iss >> rock.mortarColorMultiplier;
+    else if (key == "rock_dark_brick_color_multiplier") iss >> rock.darkBrickColorMultiplier;
+    else if (key == "rock_light_brick_color_multiplier") iss >> rock.lightBrickColorMultiplier;
+    else if (key == "rock_brick_outline_color_multiplier") iss >> rock.brickOutlineColorMultiplier;
     // Lava settings
     else if (key == "lava_color_r") iss >> lava.colorR;
     else if (key == "lava_color_g") iss >> lava.colorG;

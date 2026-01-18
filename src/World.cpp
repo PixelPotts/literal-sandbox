@@ -1,5 +1,6 @@
 #include "World.h"
 #include "SandSimulator.h"
+#include "Texturize.h"
 #include <cstdlib>
 #include <ctime>
 #include <cmath>
@@ -18,6 +19,10 @@ World::World(const Config& cfg) : config(cfg) {
     camera.x = 0;
     camera.y = WORLD_HEIGHT - camera.viewportHeight;  // Bottom of world
     camera.moveSpeed = 25.0f;  // 25 pixels per second as requested
+
+    // Initialize particle chunk system
+    particleChunks.resize(P_CHUNKS_X * P_CHUNKS_Y);
+    particleChunkActivity.resize(P_CHUNKS_X * P_CHUNKS_Y, false);
 }
 
 World::~World() {
@@ -42,6 +47,11 @@ void World::moveCamera(float dx, float dy, float deltaTime) {
 void World::worldToChunk(int worldX, int worldY, int& chunkX, int& chunkY) {
     chunkX = worldX / WorldChunk::CHUNK_SIZE;
     chunkY = worldY / WorldChunk::CHUNK_SIZE;
+}
+
+void World::worldToParticleChunk(int worldX, int worldY, int& pcX, int& pcY) {
+    pcX = worldX / PARTICLE_CHUNK_WIDTH;
+    pcY = worldY / PARTICLE_CHUNK_HEIGHT;
 }
 
 void World::worldToLocal(int worldX, int worldY, int& localX, int& localY) {
@@ -81,7 +91,20 @@ WorldChunk* World::getChunk(int chunkX, int chunkY) {
     }
 
     procedurallyGenerateMoss(ptr);
-    procedurallyGenerateInnerRocks(ptr);
+    Texturize texturizer;
+
+    // Apply rock texture
+    texturizer.applyBrickTexture(this, ptr);
+
+    // Apply obsidian texture
+    TextureParams obsidianParams;
+    obsidianParams.spawnChance = (config.obsidian.innerRockSpawnChance > 0) ? 1.0f / config.obsidian.innerRockSpawnChance : 0.0f;
+    obsidianParams.minPatchSize = config.obsidian.innerRockMinSize;
+    obsidianParams.maxPatchSize = config.obsidian.innerRockMaxSize;
+    obsidianParams.minPatchRadius = config.obsidian.innerRockMinRadius;
+    obsidianParams.maxPatchRadius = config.obsidian.innerRockMaxRadius;
+    obsidianParams.colorMultiplier = config.obsidian.innerRockDarkness;
+    texturizer.apply(this, ptr, ParticleType::OBSIDIAN, obsidianParams);
 
     return ptr;
 }
@@ -477,11 +500,19 @@ void World::spawnParticleAt(int worldX, int worldY, ParticleType type) {
             color = {128, 128, 128};
     }
     chunk->setColor(localX, localY, color);
+    chunk->setSettled(localX, localY, false);
 
-    // Wake chunk
-    chunk->setSleeping(false);
-    chunk->setActive(true);
-    chunk->resetStableFrames();
+
+    // Wake world chunk
+    wakeChunkAtWorldPos(worldX, worldY);
+
+    // Wake particle chunk
+    int pcX, pcY;
+    worldToParticleChunk(worldX, worldY, pcX, pcY);
+    int pcIndex = pcY * P_CHUNKS_X + pcX;
+    if (pcIndex >= 0 && pcIndex < particleChunkActivity.size()) {
+        particleChunkActivity[pcIndex] = true;
+    }
 }
 
 void World::loadChunksAroundCamera() {
@@ -571,12 +602,19 @@ void World::moveParticle(int fromX, int fromY, int toX, int toY) {
     toChunk->setColor(toLocalX, toLocalY, color);
     toChunk->setVelocity(toLocalX, toLocalY, vel);
     toChunk->setTemperature(toLocalX, toLocalY, temp);
-    toChunk->setSettled(toLocalX, toLocalY, false);  // Moving particles are not settled
+    toChunk->setSettled(toLocalX, toLocalY, false);
     toChunk->setMovedThisFrame(toLocalX, toLocalY, true);
 
-    // Wake both chunks
+    // Wake world chunks
     wakeChunkAtWorldPos(fromX, fromY);
     wakeChunkAtWorldPos(toX, toY);
+
+    // Wake particle chunks
+    int pcX, pcY;
+    worldToParticleChunk(fromX, fromY, pcX, pcY);
+    particleChunkActivity[pcY * P_CHUNKS_X + pcX] = true;
+    worldToParticleChunk(toX, toY, pcX, pcY);
+    particleChunkActivity[pcY * P_CHUNKS_X + pcX] = true;
 }
 
 void World::swapParticles(int x1, int y1, int x2, int y2) {
@@ -605,15 +643,24 @@ void World::swapParticles(int x1, int y1, int x2, int y2) {
     chunk1->setColor(local1X, local1Y, color2);
     chunk1->setVelocity(local1X, local1Y, vel2);
     chunk1->setMovedThisFrame(local1X, local1Y, true);
+    chunk1->setSettled(local1X, local1Y, false);
 
     chunk2->setParticle(local2X, local2Y, type1);
     chunk2->setColor(local2X, local2Y, color1);
     chunk2->setVelocity(local2X, local2Y, vel1);
     chunk2->setMovedThisFrame(local2X, local2Y, true);
+    chunk2->setSettled(local2X, local2Y, false);
 
-    // Wake both chunks
+    // Wake world chunks
     wakeChunkAtWorldPos(x1, y1);
     wakeChunkAtWorldPos(x2, y2);
+
+    // Wake particle chunks
+    int pcX, pcY;
+    worldToParticleChunk(x1, y1, pcX, pcY);
+    particleChunkActivity[pcY * P_CHUNKS_X + pcX] = true;
+    worldToParticleChunk(x2, y2, pcX, pcY);
+    particleChunkActivity[pcY * P_CHUNKS_X + pcX] = true;
 }
 
 void World::wakeChunkAtWorldPos(int worldX, int worldY) {
@@ -682,48 +729,92 @@ void World::updateSandParticle(int x, int y) {
 }
 
 void World::updateWaterParticle(int x, int y) {
-    // Fall straight down
-    if (y + 1 < WORLD_HEIGHT && !isOccupied(x, y + 1)) {
+    // 1. Fall straight down
+    if (y + 1 < WORLD_HEIGHT && getParticle(x, y + 1) == ParticleType::EMPTY) {
         moveParticle(x, y, x, y + 1);
         return;
     }
 
-    // Diagonal falling
-    bool leftDiag = (x > 0 && y + 1 < WORLD_HEIGHT && !isOccupied(x - 1, y + 1));
-    bool rightDiag = (x < WORLD_WIDTH - 1 && y + 1 < WORLD_HEIGHT && !isOccupied(x + 1, y + 1));
+    // 2. Diagonal falling
+    bool leftDiag = (x > 0 && y + 1 < WORLD_HEIGHT && getParticle(x - 1, y + 1) == ParticleType::EMPTY);
+    bool rightDiag = (x < WORLD_WIDTH - 1 && y + 1 < WORLD_HEIGHT && getParticle(x + 1, y + 1) == ParticleType::EMPTY);
 
     if (leftDiag && rightDiag) {
         int newX = (std::rand() % 2) ? x - 1 : x + 1;
         moveParticle(x, y, newX, y + 1);
         return;
-    } else if (leftDiag) {
+    }
+    if (leftDiag) {
         moveParticle(x, y, x - 1, y + 1);
         return;
-    } else if (rightDiag) {
+    }
+    if (rightDiag) {
         moveParticle(x, y, x + 1, y + 1);
         return;
     }
 
-    // Horizontal flow
+    // 3. Horizontal flow (with path checking)
     int flowSpeed = config.water.horizontalFlowSpeed;
-    for (int speed = flowSpeed; speed >= 1; --speed) {
-        bool leftOpen = (x - speed >= 0) && !isOccupied(x - speed, y);
-        bool rightOpen = (x + speed < WORLD_WIDTH) && !isOccupied(x + speed, y);
+    if (flowSpeed <= 0) flowSpeed = 1; // Ensure at least 1 step
 
-        if (leftOpen && rightOpen) {
-            int newX = (std::rand() % 2) ? x - speed : x + speed;
-            moveParticle(x, y, newX, y);
-            return;
-        } else if (leftOpen) {
-            moveParticle(x, y, x - speed, y);
-            return;
-        } else if (rightOpen) {
-            moveParticle(x, y, x + speed, y);
-            return;
+    // Randomly choose left or right preference
+    bool preferLeft = (std::rand() % 2 == 0);
+
+    for (int speed = flowSpeed; speed >= 1; --speed) { // Check furthest distances first
+        // Try left
+        if (preferLeft) {
+            if (x - speed >= 0) {
+                bool pathClear = true;
+                for (int s_path = 1; s_path < speed; ++s_path) {
+                    if (getParticle(x - s_path, y) != ParticleType::WATER) { // Path must be water
+                        pathClear = false;
+                        break;
+                    }
+                }
+                if (pathClear && getParticle(x - speed, y) == ParticleType::EMPTY) {
+                    moveParticle(x, y, x - speed, y);
+                    return;
+                }
+            }
+        }
+        // Try right
+        if (x + speed < WORLD_WIDTH) {
+            bool pathClear = true;
+            for (int s_path = 1; s_path < speed; ++s_path) {
+                if (getParticle(x + s_path, y) != ParticleType::WATER) { // Path must be water
+                    pathClear = false;
+                    break;
+                }
+            }
+            if (pathClear && getParticle(x + speed, y) == ParticleType::EMPTY) {
+                moveParticle(x, y, x + speed, y);
+                return;
+            }
+        }
+
+        // If preferLeft was true, now try right if it wasn't already checked
+        if (preferLeft) {
+            // This part is already covered by the previous if (x + speed < WORLD_WIDTH)
+        }
+        // If preferLeft was false, now try left if it wasn't already checked
+        else {
+            if (x - speed >= 0) {
+                bool pathClear = true;
+                for (int s_path = 1; s_path < speed; ++s_path) {
+                    if (getParticle(x - s_path, y) != ParticleType::WATER) { // Path must be water
+                        pathClear = false;
+                        break;
+                    }
+                }
+                if (pathClear && getParticle(x - speed, y) == ParticleType::EMPTY) {
+                    moveParticle(x, y, x - speed, y);
+                    return;
+                }
+            }
         }
     }
 
-    // Can't move at all - mark as settled
+    // 4. If no movement possible, mark as settled
     markSettled(x, y, true);
 }
 
@@ -901,280 +992,83 @@ void World::updateParticle(int worldX, int worldY) {
     }
 }
 
-void World::updateChunk(WorldChunk* chunk, float deltaTime) {
-    if (!chunk || chunk->isSleeping()) return;
 
-    int worldStartX = chunk->getWorldX();
-    int worldStartY = chunk->getWorldY();
-
-    bool anyMoved = false;
-
-    // Clear moved flags
-    chunk->clearMovedFlags();
-
-    // First pass: Handle EXPLODING particles (special mode from explosions)
-    std::vector<std::pair<int,int>> toDelete;
-    for (int localY = 0; localY < WorldChunk::CHUNK_SIZE; localY++) {
-        for (int localX = 0; localX < WorldChunk::CHUNK_SIZE; localX++) {
-            if (!chunk->isExploding(localX, localY)) continue;
-            if (chunk->hasMovedThisFrame(localX, localY)) continue;
-
-            ParticleType type = chunk->getParticle(localX, localY);
-            if (type == ParticleType::EMPTY) {
-                chunk->setExploding(localX, localY, false);
-                continue;
-            }
-
-            int worldX = worldStartX + localX;
-            int worldY = worldStartY + localY;
-
-            ParticleVelocity vel = chunk->getVelocity(localX, localY);
-
-            // Apply gravity
-            vel.vy += config.particleFallAcceleration;
-
-            // Apply air resistance
-            vel.vx *= 0.98f;
-            vel.vy *= 0.98f;
-
-            // Calculate new position
-            int newX = worldX + (int)std::round(vel.vx);
-            int newY = worldY + (int)std::round(vel.vy);
-
-            // Check for out of bounds - DELETE particle
-            if (!inWorldBounds(newX, newY)) {
-                toDelete.push_back({localX, localY});
-                anyMoved = true;
-                continue;
-            }
-
-            // Check what's at the target position
-            ParticleType targetType = getParticle(newX, newY);
-
-            // Only delete if hitting immovable solid (rock, wood, obsidian, glass)
-            if (targetType == ParticleType::ROCK ||
-                targetType == ParticleType::WOOD ||
-                targetType == ParticleType::OBSIDIAN ||
-                targetType == ParticleType::GLASS) {
-                toDelete.push_back({localX, localY});
-                anyMoved = true;
-                continue;
-            }
-
-            // If target is occupied by other movable particles, swap positions
-            if (targetType != ParticleType::EMPTY) {
-                // Get target particle's data before swap
-                WorldChunk* targetChunk = getChunkAtWorldPos(newX, newY);
-                if (targetChunk) {
-                    int targetLocalX, targetLocalY;
-                    worldToLocal(newX, newY, targetLocalX, targetLocalY);
-
-                    ParticleColor targetColor = targetChunk->getColor(targetLocalX, targetLocalY);
-                    ParticleVelocity targetVel = targetChunk->getVelocity(targetLocalX, targetLocalY);
-                    bool targetExploding = targetChunk->isExploding(targetLocalX, targetLocalY);
-                    int targetAge = targetChunk->getParticleAge(targetLocalX, targetLocalY);
-
-                    // Get current particle's data
-                    ParticleType currentType = chunk->getParticle(localX, localY);
-                    ParticleColor currentColor = chunk->getColor(localX, localY);
-                    int currentAge = chunk->getParticleAge(localX, localY);
-
-                    // Swap: put target particle in our old position
-                    chunk->setParticle(localX, localY, targetType);
-                    chunk->setColor(localX, localY, targetColor);
-                    chunk->setVelocity(localX, localY, targetVel);
-                    chunk->setExploding(localX, localY, targetExploding);
-                    chunk->setParticleAge(localX, localY, targetAge);
-
-                    // Put our particle in target position
-                    targetChunk->setParticle(targetLocalX, targetLocalY, currentType);
-                    targetChunk->setColor(targetLocalX, targetLocalY, currentColor);
-                    targetChunk->setVelocity(targetLocalX, targetLocalY, vel);
-                    targetChunk->setExploding(targetLocalX, targetLocalY, true);
-                    targetChunk->setParticleAge(targetLocalX, targetLocalY, currentAge);
-
-                    // Mark both as moved
-                    chunk->setMovedThisFrame(localX, localY, true);
-                    targetChunk->setMovedThisFrame(targetLocalX, targetLocalY, true);
-
-                    anyMoved = true;
-
-                    // Check deletion timeout for the moved particle
-                    int age = currentAge + 1;
-                    targetChunk->setParticleAge(targetLocalX, targetLocalY, age);
-                    if (age >= 0) {
-                        // Use world coords for deletion tracking
-                        setParticle(newX, newY, ParticleType::EMPTY);
-                    }
-
-                    // Check if velocity is low enough to stop exploding
-                    float speed = std::sqrt(vel.vx * vel.vx + vel.vy * vel.vy);
-                    if (speed < 0.5f) {
-                        targetChunk->setExploding(targetLocalX, targetLocalY, false);
-                        targetChunk->setVelocity(targetLocalX, targetLocalY, {0, 0});
-                    }
-                }
-                continue;
-            }
-
-            // Move the particle to empty space
-            moveParticle(worldX, worldY, newX, newY);
-
-            // Update state at new position
-            WorldChunk* newChunk = getChunkAtWorldPos(newX, newY);
-            if (newChunk) {
-                int newLocalX, newLocalY;
-                worldToLocal(newX, newY, newLocalX, newLocalY);
-                newChunk->setVelocity(newLocalX, newLocalY, vel);
-                newChunk->setExploding(newLocalX, newLocalY, true);
-
-                // Increment age - delete when reaches 0 (started negative for random timeout)
-                int age = newChunk->getParticleAge(newLocalX, newLocalY) + 1;
-                newChunk->setParticleAge(newLocalX, newLocalY, age);
-                if (age >= 0) { // Delete when timeout reached (500-1000ms from explosion)
-                    toDelete.push_back({newLocalX, newLocalY});
-                }
-            }
-            anyMoved = true;
-
-            // Check if velocity is low enough to stop exploding
-            float speed = std::sqrt(vel.vx * vel.vx + vel.vy * vel.vy);
-            if (speed < 0.5f && newChunk) {
-                int newLocalX, newLocalY;
-                worldToLocal(newX, newY, newLocalX, newLocalY);
-                newChunk->setExploding(newLocalX, newLocalY, false);
-                newChunk->setVelocity(newLocalX, newLocalY, {0, 0});
-            }
-        }
-    }
-
-    // Delete exploded particles that hit solids
-    for (const auto& pos : toDelete) {
-        chunk->setParticle(pos.first, pos.second, ParticleType::EMPTY);
-        chunk->setColor(pos.first, pos.second, {0, 0, 0});
-        chunk->setVelocity(pos.first, pos.second, {0, 0});
-        chunk->setExploding(pos.first, pos.second, false);
-    }
-
-    // Pass 1: Reset lava colors to base before applying any dynamic effects
-    for (int localY = 0; localY < WorldChunk::CHUNK_SIZE; localY++) {
-        for (int localX = 0; localX < WorldChunk::CHUNK_SIZE; localX++) {
-            if (chunk->getParticle(localX, localY) == ParticleType::LAVA) {
-                // Generate a fresh random color from the base config for lava
-                chunk->setColor(localX, localY, generateRandomColor(
-                    config.lava.colorR, config.lava.colorG, config.lava.colorB, config.lava.colorVariation));
-            }
-        }
-    }
-
-    // Second pass: Normal automaton physics (non-exploding particles)
-    for (int localY = WorldChunk::CHUNK_SIZE - 1; localY >= 0; localY--) {
-        bool leftToRight = (localY % 2 == 0);
-
-        for (int i = 0; i < WorldChunk::CHUNK_SIZE; i++) {
-            int localX = leftToRight ? i : (WorldChunk::CHUNK_SIZE - 1 - i);
-
-            if (chunk->hasMovedThisFrame(localX, localY)) continue;
-            if (chunk->isExploding(localX, localY)) continue;
-
-            ParticleType type = chunk->getParticle(localX, localY);
-            if (type == ParticleType::EMPTY) continue;
-
-            int worldX = worldStartX + localX;
-            int worldY = worldStartY + localY;
-
-            ParticleType beforeType = getParticle(worldX, worldY);
-            updateParticle(worldX, worldY);
-            ParticleType afterType = getParticle(worldX, worldY);
-
-            if (beforeType != afterType || afterType == ParticleType::EMPTY) {
-                anyMoved = true;
-            }
-        }
-    }
-
-    // Third pass: Wetness simulation
-    for (int localY = 0; localY < WorldChunk::CHUNK_SIZE; localY++) {
-        for (int localX = 0; localX < WorldChunk::CHUNK_SIZE; localX++) {
-            int worldX = worldStartX + localX;
-            int worldY = worldStartY + localY;
-            updateWetnessForParticle(worldX, worldY);
-        }
-    }
-
-    // Fourth pass: Apply visual effects (e.g., brightening lava edges)
-    for (int localY = 0; localY < WorldChunk::CHUNK_SIZE; localY++) {
-        for (int localX = 0; localX < WorldChunk::CHUNK_SIZE; localX++) {
-            if (chunk->getParticle(localX, localY) == ParticleType::LAVA) {
-                int worldX = worldStartX + localX;
-                int worldY = worldStartY + localY;
-
-                bool isEdgeLava = false;
-                // Check 8 neighbors
-                const int dx[] = {-1, 0, 1, -1, 1, -1, 0, 1};
-                const int dy[] = {-1, -1, -1, 0, 0, 1, 1, 1};
-
-                for (int dir = 0; dir < 8; ++dir) {
-                    int nx = worldX + dx[dir];
-                    int ny = worldY + dy[dir];
-
-                    if (!inWorldBounds(nx, ny)) {
-                        // Edge of the world is considered a non-lava neighbor
-                        isEdgeLava = true;
-                        break;
-                    }
-
-                    ParticleType neighborType = getParticle(nx, ny);
-                    if (neighborType != ParticleType::EMPTY && neighborType != ParticleType::LAVA) {
-                        isEdgeLava = true;
-                        break;
-                    }
-                }
-
-                if (isEdgeLava && config.lava.edgeBrightening) {
-                    ParticleColor currentColor = chunk->getColor(localX, localY);
-                    HSL hsl = rgbToHsl(currentColor.r, currentColor.g, currentColor.b);
-
-                    // Brighten slightly - keep orange, just more vivid
-                    hsl.l = std::min(0.7, hsl.l + config.lava.edgeBrighteningAmount);
-
-                    ParticleColor brightenedColor = hslToRgb(hsl.h, hsl.s, hsl.l);
-                    chunk->setColor(localX, localY, brightenedColor);
-                }
-            }
-        }
-    }
-
-    // Update sleep state
-    if (anyMoved) {
-        chunk->resetStableFrames();
-        chunk->setSleeping(false);
-    } else {
-        chunk->incrementStableFrames();
-        if (chunk->getStableFrameCount() >= FRAMES_UNTIL_SLEEP) {
-            chunk->setSleeping(true);
-        }
-    }
-}
 
 void World::update(float deltaTime) {
-    // Load/unload chunks around camera
     loadChunksAroundCamera();
     unloadDistantChunks();
 
-    // Get camera center chunk
-    int centerChunkX = (int)(camera.x + camera.viewportWidth / 2) / WorldChunk::CHUNK_SIZE;
-    int centerChunkY = (int)(camera.y + camera.viewportHeight / 2) / WorldChunk::CHUNK_SIZE;
+    std::fill(particleChunkActivity.begin(), particleChunkActivity.end(), false);
 
-    // Update chunks within simulate radius
-    for (int dy = -SIMULATE_RADIUS; dy <= SIMULATE_RADIUS; dy++) {
-        for (int dx = -SIMULATE_RADIUS; dx <= SIMULATE_RADIUS; dx++) {
-            int cx = centerChunkX + dx;
-            int cy = centerChunkY + dy;
+    // Determine visible particle chunk range to simulate
+    int visWorldX_start, visWorldY_start, visWorldX_end, visWorldY_end;
+    getVisibleRegion(visWorldX_start, visWorldY_start, visWorldX_end, visWorldY_end);
 
-            WorldChunk* chunk = getChunk(cx, cy);
-            if (chunk) {
-                updateChunk(chunk, deltaTime);
+    int startPCX, startPCY, endPCX, endPCY;
+    worldToParticleChunk(visWorldX_start, visWorldY_start, startPCX, startPCY);
+    worldToParticleChunk(visWorldX_end - 1, visWorldY_end - 1, endPCX, endPCY);
+
+    // Simulate a border of 1 particle chunk around the visible area
+    startPCX = std::max(0, startPCX - 1);
+    startPCY = std::max(0, startPCY - 1);
+    endPCX = std::min(P_CHUNKS_X - 1, endPCX + 1);
+    endPCY = std::min(P_CHUNKS_Y - 1, endPCY + 1);
+
+    for (int pcY = endPCY; pcY >= startPCY; --pcY) {
+        bool leftToRight = (pcY % 2 == 0);
+        for (int i = 0; i < (endPCX - startPCX + 1); ++i) {
+            int pcX = startPCX + (leftToRight ? i : (endPCX - startPCX - i));
+
+            int pcIndex = pcY * P_CHUNKS_X + pcX;
+            if (!particleChunks[pcIndex].isAwake) {
+                continue;
+            }
+
+            int startWorldX = pcX * PARTICLE_CHUNK_WIDTH;
+            int startWorldY = pcY * PARTICLE_CHUNK_HEIGHT;
+            int endWorldX = startWorldX + PARTICLE_CHUNK_WIDTH;
+            int endWorldY = startWorldY + PARTICLE_CHUNK_HEIGHT;
+
+            for (int y = endWorldY - 1; y >= startWorldY; --y) {
+                 if (y < 0 || y >= WORLD_HEIGHT) continue;
+                for (int x = startWorldX; x < endWorldX; ++x) {
+                    if (x < 0 || x >= WORLD_WIDTH) continue;
+                    
+                    ParticleType type = getParticle(x, y);
+                    if (type != ParticleType::EMPTY) {
+                        updateParticle(x, y);
+                    }
+                }
+            }
+        }
+    }
+
+    // Update sleep states
+    for (int i = 0; i < particleChunks.size(); ++i) {
+        if (particleChunkActivity[i]) {
+            particleChunks[i].isAwake = true;
+            particleChunks[i].stableFrames = 0;
+            // Wake up neighbors
+            int pcX = i % P_CHUNKS_X;
+            int pcY = i / P_CHUNKS_X;
+            for (int dy = -1; dy <= 1; ++dy) {
+                for (int dx = -1; dx <= 1; ++dx) {
+                    if (dx == 0 && dy == 0) continue;
+                    int nPcX = pcX + dx;
+                    int nPcY = pcY + dy;
+                    if (nPcX >= 0 && nPcX < P_CHUNKS_X && nPcY >= 0 && nPcY < P_CHUNKS_Y) {
+                        int neighborIdx = nPcY * P_CHUNKS_X + nPcX;
+                        particleChunks[neighborIdx].isAwake = true;
+                        particleChunks[neighborIdx].stableFrames = 0;
+                    }
+                }
+            }
+        } else {
+            if (particleChunks[i].isAwake) {
+                particleChunks[i].stableFrames++;
+                if (particleChunks[i].stableFrames > P_CHUNK_FRAMES_UNTIL_SLEEP) {
+                    particleChunks[i].isAwake = false;
+                }
             }
         }
     }
@@ -1476,50 +1370,15 @@ bool World::checkCapsuleCollision(float centerX, float centerY, float radius, fl
     return collided;
 }
 
-void World::procedurallyGenerateInnerRocks(WorldChunk* chunk) {
-    if (!chunk) return;
 
-    int chunkWorldX = chunk->getWorldX();
-    int chunkWorldY = chunk->getWorldY();
-
-    for (int y = 0; y < WorldChunk::CHUNK_SIZE; ++y) {
-        for (int x = 0; x < WorldChunk::CHUNK_SIZE; ++x) {
-            int worldX = chunkWorldX + x;
-            int worldY = chunkWorldY + y;
-
-            ParticleType type = getParticle(worldX, worldY);
-            if (type == ParticleType::ROCK || type == ParticleType::OBSIDIAN) {
-                const auto& typeConfig = (type == ParticleType::ROCK) ? config.rock : config.obsidian;
-                if (typeConfig.innerRockSpawnChance > 0 && std::rand() % typeConfig.innerRockSpawnChance < 1) {
-                    int patch_size = typeConfig.innerRockMinSize + std::rand() % (typeConfig.innerRockMaxSize - typeConfig.innerRockMinSize + 1);
-                    float patch_radius = typeConfig.innerRockMinRadius + (float)(std::rand()) / (float)(RAND_MAX / (typeConfig.innerRockMaxRadius - typeConfig.innerRockMinRadius));
-
-                    for (int dy = -patch_size / 2; dy <= patch_size / 2; ++dy) {
-                        for (int dx = -patch_size / 2; dx <= patch_size / 2; ++dx) {
-                            if (dx * dx + dy * dy <= patch_radius * patch_radius) {
-                                int currentX = worldX + dx;
-                                int currentY = worldY + dy;
-
-                                if (inWorldBounds(currentX, currentY) && getParticle(currentX, currentY) == type) {
-                                    ParticleColor color = getColor(currentX, currentY);
-                                    setColor(currentX, currentY, {static_cast<unsigned char>(color.r * typeConfig.innerRockDarkness), static_cast<unsigned char>(color.g * typeConfig.innerRockDarkness), static_cast<unsigned char>(color.b * typeConfig.innerRockDarkness)});
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 void World::procedurallyGenerateMoss(WorldChunk* chunk) {
     if (!chunk) return;
 
     // A time limit for generation to stop after a few seconds from the start of the program
-    static std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
-    if (std::chrono::steady_clock::now() - start_time > std::chrono::seconds(2)) {
-        return;
-    }
+    // static std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+    // if (std::chrono::steady_clock::now() - start_time > std::chrono::seconds(2)) {
+    //     return;
+    // }
 
     int chunkWorldX = chunk->getWorldX();
     int chunkWorldY = chunk->getWorldY();
@@ -1529,21 +1388,28 @@ void World::procedurallyGenerateMoss(WorldChunk* chunk) {
             int worldX = chunkWorldX + x;
             int worldY = chunkWorldY + y;
 
+            // If this particle is rock and the one above it is empty
             if (getParticle(worldX, worldY) == ParticleType::ROCK && getParticle(worldX, worldY - 1) == ParticleType::EMPTY) {
-                if (std::rand() % 10 < 1) { 
+                if (std::rand() % 10 < 1) {
                     int width = 2 + std::rand() % 8;
                     int depth = 1 + std::rand() % 4;
 
+                    // for the depth we want to make the moss
                     for (int py = -1; py < depth; ++py) {
+
+                        // for the width we want to make the moss
                         for (int px = -width / 2; px < width / 2; ++px) {
                             int mossX = worldX + px;
                             int mossY = worldY + py;
 
+                            // generate the moss, replace the rock particles if they're on it
                             if (inWorldBounds(mossX, mossY)) {
                                 ParticleType existingParticle = getParticle(mossX, mossY);
                                 if (existingParticle == ParticleType::ROCK) {
                                     setParticle(mossX, mossY, ParticleType::MOSS);
                                     setColor(mossX, mossY, generateRandomColor(config.moss.colorR, config.moss.colorG, config.moss.colorB, config.moss.colorVariation));
+
+                                // some particles grow above the rock
                                 } else if (existingParticle == ParticleType::EMPTY) {
                                     ParticleType particleBelow = getParticle(mossX, mossY + 1);
                                     if (particleBelow == ParticleType::ROCK || particleBelow == ParticleType::MOSS) {
