@@ -77,7 +77,7 @@ struct ParticleTypeConfig {
     int borderPatternDottedDotWidth;
     int borderPatternDottedDotHeight;
     int borderPatternDottedSpacing;
-
+    bool borderIslandExcluded;
 
     // Visual effects
     bool edgeBrightening;

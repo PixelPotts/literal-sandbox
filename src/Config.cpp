@@ -8,7 +8,7 @@ Config::Config() {
 }
 
 void Config::setDefaults() {
-    windowWidth = 1000;
+    windowWidth = 512;
     windowHeight = 512;
     pixelScale = 1;
     fallSpeed = 100;
@@ -154,8 +154,7 @@ void Config::setDefaults() {
     rock.borderPatternDottedDotWidth = 2;
     rock.borderPatternDottedDotHeight = 2;
     rock.borderPatternDottedSpacing = 2;
-
-
+    rock.borderIslandExcluded = true;
 
     // Lava defaults
     lava.colorR = 255;

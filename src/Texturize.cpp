@@ -167,44 +167,122 @@ void Texturize::applyRockBorders(World* world, WorldChunk* chunk) {
     int chunkWorldX = chunk->getWorldX();
     int chunkWorldY = chunk->getWorldY();
     int borderWidth = config.rock.borderWidth;
+    bool islandExcluded = config.rock.borderIslandExcluded;
 
-    // Build a distance map for each pixel to the nearest non-rock edge
-    // Using a simple approach: for each rock pixel, find min distance to non-rock
+    // Expanded area to detect islands - use larger area for better detection
+    int expandSize = 64; // Large enough to detect most holes
+    int areaSize = WorldChunk::CHUNK_SIZE + expandSize * 2;
+    int areaStartX = chunkWorldX - expandSize;
+    int areaStartY = chunkWorldY - expandSize;
+
+    // Map to track which non-rock pixels are islands (enclosed by rock)
+    // 0 = rock, -1 = non-rock unclassified, 1 = exterior, 2 = island
+    std::vector<std::vector<int>> regionMap(areaSize, std::vector<int>(areaSize, 0));
+
+    // First pass: mark all non-rock pixels
+    for (int y = 0; y < areaSize; ++y) {
+        for (int x = 0; x < areaSize; ++x) {
+            int worldX = areaStartX + x;
+            int worldY = areaStartY + y;
+
+            if (!world->inWorldBounds(worldX, worldY)) {
+                regionMap[y][x] = -1; // Out of bounds = non-rock
+            } else if (world->getParticle(worldX, worldY) != ParticleType::ROCK) {
+                regionMap[y][x] = -1; // Any non-rock material
+            }
+        }
+    }
+
+    // Seed flood fill from area edges - non-rock at edges extends beyond view = exterior
+    std::vector<std::pair<int, int>> queue;
+    for (int x = 0; x < areaSize; ++x) {
+        if (regionMap[0][x] == -1) queue.push_back({x, 0});
+        if (regionMap[areaSize-1][x] == -1) queue.push_back({x, areaSize-1});
+    }
+    for (int y = 1; y < areaSize - 1; ++y) {
+        if (regionMap[y][0] == -1) queue.push_back({0, y});
+        if (regionMap[y][areaSize-1] == -1) queue.push_back({areaSize-1, y});
+    }
+
+    while (!queue.empty()) {
+        auto [x, y] = queue.back();
+        queue.pop_back();
+
+        if (x < 0 || x >= areaSize || y < 0 || y >= areaSize) continue;
+        if (regionMap[y][x] != -1) continue;
+
+        regionMap[y][x] = 1; // Exterior
+
+        queue.push_back({x-1, y});
+        queue.push_back({x+1, y});
+        queue.push_back({x, y-1});
+        queue.push_back({x, y+1});
+    }
+
+    // Any remaining -1 pixels are islands (enclosed non-rock not connected to area edge)
+    for (int y = 0; y < areaSize; ++y) {
+        for (int x = 0; x < areaSize; ++x) {
+            if (regionMap[y][x] == -1) {
+                regionMap[y][x] = 2; // Island
+            }
+        }
+    }
+
+    // Build distance map and track if nearest non-rock is an island
     std::vector<std::vector<float>> distanceMap(WorldChunk::CHUNK_SIZE,
         std::vector<float>(WorldChunk::CHUNK_SIZE, static_cast<float>(borderWidth + 1)));
+    std::vector<std::vector<bool>> adjacentToIsland(WorldChunk::CHUNK_SIZE,
+        std::vector<bool>(WorldChunk::CHUNK_SIZE, false));
 
-    // For each rock pixel in this chunk, calculate distance to nearest non-rock
     for (int y = 0; y < WorldChunk::CHUNK_SIZE; ++y) {
         for (int x = 0; x < WorldChunk::CHUNK_SIZE; ++x) {
             int worldX = chunkWorldX + x;
             int worldY = chunkWorldY + y;
 
             if (world->getParticle(worldX, worldY) != ParticleType::ROCK) {
-                distanceMap[y][x] = 0.0f; // Not rock, distance is 0
+                distanceMap[y][x] = 0.0f;
                 continue;
             }
 
-            // Search in a square around this pixel for non-rock
             float minDist = static_cast<float>(borderWidth + 1);
+            bool nearestIsIsland = false;
+
             for (int dy = -borderWidth; dy <= borderWidth; ++dy) {
                 for (int dx = -borderWidth; dx <= borderWidth; ++dx) {
                     int checkX = worldX + dx;
                     int checkY = worldY + dy;
 
-                    bool isNonRock = !world->inWorldBounds(checkX, checkY) ||
-                                     world->getParticle(checkX, checkY) != ParticleType::ROCK;
+                    // Convert to area coordinates
+                    int areaX = checkX - areaStartX;
+                    int areaY = checkY - areaStartY;
 
-                    if (isNonRock) {
+                    if (areaX < 0 || areaX >= areaSize || areaY < 0 || areaY >= areaSize) {
+                        // Out of bounds = exterior
                         float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
-                        minDist = std::min(minDist, dist);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearestIsIsland = false;
+                        }
+                        continue;
+                    }
+
+                    int region = regionMap[areaY][areaX];
+                    if (region == 1 || region == 2) { // Non-rock (exterior or island)
+                        float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearestIsIsland = (region == 2);
+                        }
                     }
                 }
             }
             distanceMap[y][x] = minDist;
+            adjacentToIsland[y][x] = nearestIsIsland;
+
         }
     }
 
-    // Apply gradient and pattern based on distance
+    // Apply gradient and pattern
     float outerMult = config.rock.borderGradientOuterEdgeColorMultiplier;
     float innerMult = config.rock.borderGradientInnerEdgeColorMultiplier;
     bool isDotted = (config.rock.borderPattern == "dotted");
@@ -223,31 +301,42 @@ void Texturize::applyRockBorders(World* world, WorldChunk* chunk) {
 
             float dist = distanceMap[y][x];
 
-            // Skip if outside border width
             if (dist > static_cast<float>(borderWidth)) {
                 continue;
             }
 
-            // Calculate gradient factor (0.0 at edge, 1.0 at inner border)
+            bool isIslandEdge = islandExcluded && adjacentToIsland[y][x];
+
+            if (isIslandEdge) {
+                // Island edge: only outer line (dist <= 1.5), 2x lighter than normal outer
+                if (dist <= 1.5f) {
+                    float islandMult = 1.0f - (1.0f - outerMult) * 0.5f; // Half the darkening
+                    ParticleColor color = world->getColor(worldX, worldY);
+                    world->setColor(worldX, worldY, {
+                        static_cast<unsigned char>(std::max(0.0f, std::min(255.0f,
+                            static_cast<float>(color.r) * islandMult))),
+                        static_cast<unsigned char>(std::max(0.0f, std::min(255.0f,
+                            static_cast<float>(color.g) * islandMult))),
+                        static_cast<unsigned char>(std::max(0.0f, std::min(255.0f,
+                            static_cast<float>(color.b) * islandMult)))
+                    });
+                }
+                // Skip gradient/pattern for island edges
+                continue;
+            }
+
+            // Exterior edge: full gradient
             float t = dist / static_cast<float>(borderWidth);
-            t = std::max(0.0f, std::min(1.0f, t)); // Clamp to [0, 1]
-
-            // Smooth gradient interpolation (ease-in-out for nicer shadow)
+            t = std::max(0.0f, std::min(1.0f, t));
             float smoothT = t * t * (3.0f - 2.0f * t);
-
-            // Interpolate color multiplier from outer to inner
             float colorMult = outerMult + (innerMult - outerMult) * smoothT;
 
-            // Apply pattern on top of gradient
             bool applyPattern = true;
             if (isDotted) {
-                // Create dotted pattern based on world coordinates
                 int patternPeriodX = dotWidth + dotSpacing;
                 int patternPeriodY = dotHeight + dotSpacing;
                 int posInPatternX = ((worldX % patternPeriodX) + patternPeriodX) % patternPeriodX;
                 int posInPatternY = ((worldY % patternPeriodY) + patternPeriodY) % patternPeriodY;
-
-                // Only draw dot if within dot bounds
                 applyPattern = (posInPatternX < dotWidth && posInPatternY < dotHeight);
             }
 
