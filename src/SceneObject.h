@@ -122,6 +122,12 @@ public:
     // Update (override in derived classes)
     virtual void update(float deltaTime);
 
+    // Health and damage
+    virtual void takeDamage(int amount);
+    int getHp() const { return hp; }
+    int getMaxHp() const { return maxHp; }
+    void renderHealthBar(SDL_Renderer* renderer, float cameraX, float cameraY, float scaleX, float scaleY) const;
+
     // Get world-space collider bounds
     void getWorldCollider(float& outX, float& outY, float& outW, float& outH) const;
 
@@ -137,4 +143,6 @@ protected:
     bool visible;
     bool staticObject;       // Static objects don't move
     bool blockParticles;     // Does this block particle movement?
+    int hp;                  // Health points
+    int maxHp;               // Maximum health points
 };

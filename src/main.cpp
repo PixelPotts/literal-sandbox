@@ -14,6 +14,9 @@
 #include "Collectible.h"
 #include "Gun.h"
 #include "Bullet.h"
+#include "ZLayers.h"
+#include "MainSprite.h"
+#include "LittlePurpleJumper.h"
 
 struct UIDropdown {
     SDL_Rect rect;
@@ -256,19 +259,49 @@ int main(int argc, char* argv[]) {
     // Create World
     World world(config);
 
-    // Viewport is the game's virtual size
-    // Use vertical height from config, calculate horizontal to fill screen with uniform scaling
-    int viewportHeight = config.windowHeight;
-    float uniformScale = (float)displayMode.h / (float)viewportHeight;
-    int viewportWidth = (int)(displayMode.w / uniformScale);
+    // Get actual window size (respects OS rotation for portrait monitors)
+    int actualWindowW, actualWindowH;
+    SDL_GetWindowSize(window, &actualWindowW, &actualWindowH);
+
+    // Uniform scaling: 300 pixels tall, width based on aspect ratio
+    int viewportHeight = 300;
+    float uniformScale = (float)actualWindowH / (float)viewportHeight;
+    int viewportWidth = (int)(actualWindowW / uniformScale);
     world.setViewportSize(viewportWidth, viewportHeight);
 
+    // Uniform scale for both axes (square pixels)
+    float scaleX = uniformScale;
+    float scaleY = uniformScale;
+
+    // DEBUG: Print viewport calculation
+    std::cout << "ActualWindow: " << actualWindowW << "x" << actualWindowH
+              << " Viewport: " << viewportWidth << "x" << viewportHeight
+              << " Scale: " << uniformScale << std::endl;
+
+    // Initialize background layers (mountains)
+    ZLayers zLayers;
+    zLayers.init(renderer, viewportWidth, viewportHeight, World::WORLD_WIDTH);
+
+    // Initialize main sprite sheet for enemies, etc.
+    MainSprite mainSprite;
+    if (!mainSprite.load("scenes/mainSprite.png", renderer)) {
+        std::cerr << "Failed to load main sprite sheet!" << std::endl;
+    }
+    // Define little_purple_jumper: standing (0,0 to 4,7) and jumping (6,0 to 10,7)
+    mainSprite.defineSprite("little_purple_jumper", {
+        {0, 0, 5, 8},   // Frame 0: standing
+        {6, 0, 5, 8}    // Frame 1: jumping
+    });
+
+    // Vector to hold enemies
+    std::vector<LittlePurpleJumper> purpleJumpers;
+
     // Set scene image - will lazy load chunks as they come into view
-    world.setSceneImage("../scenes/level1.png");
+    world.setSceneImage("scenes/level1.png");
 
     // Create player sprite
     auto playerSprite = std::make_shared<Sprite>();
-    if (!playerSprite->load("../scenes/sprite1.png", renderer)) {
+    if (!playerSprite->load("scenes/sprite1.png", renderer)) {
         std::cerr << "Failed to load player sprite!" << std::endl;
     }
 
@@ -290,7 +323,7 @@ int main(int argc, char* argv[]) {
     // Create orb1 collectible
     std::vector<std::shared_ptr<Collectible>> collectibles;
     auto orb1 = std::make_shared<Collectible>();
-    if (orb1->create("../scenes/orb1.png", 581.0f, 25750.0f, renderer)) {
+    if (orb1->create("scenes/orb1.png", 581.0f, 25750.0f, renderer)) {
         world.addSceneObject(orb1->getSceneObject());
         collectibles.push_back(orb1);
     }
@@ -299,14 +332,15 @@ int main(int argc, char* argv[]) {
     std::vector<std::shared_ptr<Gun>> guns;
     std::shared_ptr<Gun> equippedGun = nullptr;
     auto gun1 = std::make_shared<Gun>();
-    if (gun1->create("../scenes/gun1.png", 106.0f, 26062.0f, renderer)) {
+    if (gun1->create("scenes/gun1.png", 106.0f, 26062.0f, renderer)) {
         world.addSceneObject(gun1->getSceneObject());
         guns.push_back(gun1);
     }
 
     // Position camera to center on player (with bounds clamping)
     Camera& cam = world.getCamera();
-    cam.centerOn(playerStartX + 5.5f, playerStartY + 12.0f,
+    // Center on player - offset Y down so player appears lower on screen initially
+    cam.centerOn(playerStartX + 2.0f, playerStartY - 50.0f,
                  (float)World::WORLD_WIDTH, (float)World::WORLD_HEIGHT);
 
     // Camera will smoothly follow player with deadzone
@@ -314,7 +348,7 @@ int main(int argc, char* argv[]) {
 
     SDL_Texture* viewportTexture = SDL_CreateTexture(
         renderer,
-        SDL_PIXELFORMAT_RGB888,
+        SDL_PIXELFORMAT_ARGB8888,  // Match Uint32 pixel format
         SDL_TEXTUREACCESS_STREAMING,
         viewportWidth,
         viewportHeight
@@ -329,12 +363,10 @@ int main(int argc, char* argv[]) {
         SDL_Quit();
         return 1;
     }
+    // Enable alpha blending so ZLayers show through transparent pixels
+    SDL_SetTextureBlendMode(viewportTexture, SDL_BLENDMODE_BLEND);
 
     std::vector<Uint32> pixels(viewportWidth * viewportHeight);
-
-    // Scale factors for mouse input (screen -> viewport) - uniform scaling
-    float scaleX = uniformScale;
-    float scaleY = uniformScale;
 
     // Setup material dropdown
     UIDropdown dropdown;
@@ -489,7 +521,11 @@ int main(int argc, char* argv[]) {
                             float worldMouseX = cam.x + (event.button.x / scaleX);
                             float worldMouseY = cam.y + (event.button.y / scaleY);
 
-                            equippedGun->fire(bullets, muzzleX, muzzleY, worldMouseX, worldMouseY);
+                            // Calculate direction from muzzle to mouse
+                            float dirX = worldMouseX - muzzleX;
+                            float dirY = worldMouseY - muzzleY;
+
+                            equippedGun->fire(bullets, muzzleX, muzzleY, dirX, dirY);
 
                         }
                     }
@@ -660,7 +696,7 @@ int main(int argc, char* argv[]) {
 
         // Update bullets
         for (auto& bullet : bullets) {
-            bullet.update(world, deltaTime);
+            bullet.update(world, deltaTime, purpleJumpers);
         }
         // Remove inactive bullets
         bullets.erase(
@@ -738,10 +774,21 @@ int main(int argc, char* argv[]) {
 
         // Update world simulation
         Uint32 simulation_start = SDL_GetTicks();
+        static int debugFrameCount = 0;
+        debugFrameCount++;
         for (int i = 0; i < config.fallSpeed; ++i) {
             world.update(deltaTime / config.fallSpeed);
         }
         last_sim_time = SDL_GetTicks() - simulation_start;
+
+        // DEBUG: Print every 60 frames
+        if (debugFrameCount % 60 == 0) {
+            int awakeChunks = 0;
+            const auto& pChunks = world.getParticleChunks();
+            for (const auto& pc : pChunks) {
+                if (pc.isAwake) awakeChunks++;
+            }
+        }
 
         // Update and check collectibles
         float playerW = (float)playerSprite->getWidth();
@@ -773,6 +820,24 @@ int main(int argc, char* argv[]) {
             equippedGun->updateEquipped(playerCenterX, playerCenterY, cursorWorldX, cursorWorldY);
         }
 
+        // Spawn enemies from detected spawn points
+        for (auto& spawnPoint : world.getEnemySpawnPoints()) {
+            if (!spawnPoint.spawned && spawnPoint.type == SpawnMarkerType::LITTLE_PURPLE_JUMPER) {
+                LittlePurpleJumper jumper;
+                // Position at spawn point, offset up by sprite height so feet are at marker
+                jumper.init((float)spawnPoint.worldX, (float)spawnPoint.worldY - 7.0f, &mainSprite, &world);
+                purpleJumpers.push_back(jumper);
+                spawnPoint.spawned = true;
+            }
+        }
+
+        // Update enemies
+        float playerCenterXForEnemy = player->getX() + playerW / 2.0f;
+        float playerCenterYForEnemy = player->getY() + playerH / 2.0f;
+        for (auto& jumper : purpleJumpers) {
+            jumper.update(deltaTime, playerCenterXForEnemy, playerCenterYForEnemy);
+        }
+
                 // Ensure OpenGL context is current
 
                 if (SDL_GL_MakeCurrent(window, glContext) < 0) {
@@ -801,16 +866,14 @@ int main(int argc, char* argv[]) {
 
                 SDL_RenderClear(renderer);
 
-        
+                // Render background layers (mountains) before particles
+                zLayers.render(renderer, cam.x, cam.y, viewportWidth, viewportHeight, scaleX, scaleY);
 
                 // --- Optimized particle rendering ---
-
+                // Visible region is exactly viewportWidth x viewportHeight (512x512)
                 int visWorldX_start = (int)cam.x;
-
                 int visWorldY_start = (int)cam.y;
-
                 int visWorldX_end = visWorldX_start + viewportWidth;
-
                 int visWorldY_end = visWorldY_start + viewportHeight;
 
         
@@ -823,7 +886,7 @@ int main(int argc, char* argv[]) {
 
         
 
-                std::fill(pixels.begin(), pixels.end(), 0x000010);
+                std::fill(pixels.begin(), pixels.end(), 0x00000000);  // Transparent so zlayers show through
 
         
 
@@ -883,7 +946,7 @@ int main(int argc, char* argv[]) {
 
                                     const auto& color = colors[chunk_idx];
 
-                                    pixels[pixel_idx_base + screenX] = (color.r << 16) | (color.g << 8) | color.b;
+                                    pixels[pixel_idx_base + screenX] = 0xFF000000 | (color.r << 16) | (color.g << 8) | color.b;
 
                                 }
 
@@ -899,25 +962,36 @@ int main(int argc, char* argv[]) {
 
         
 
-                // Draw bullets
+                                                // Draw bullets
 
-                for (auto& bullet : bullets) {
+        
 
-                    bullet.draw(pixels, viewportWidth, viewportHeight, cam.x, cam.y, renderer);
+        
 
-                }
+                                                for (auto& bullet : bullets) {
+
+        
+
+        
+
+                                                    bullet.draw(pixels, viewportWidth, viewportHeight, cam.x, cam.y, renderer);
+
+        
+
+        
+
+                                                }
 
         
 
                 // Update texture
-
                 SDL_UpdateTexture(viewportTexture, nullptr, pixels.data(), viewportWidth * sizeof(Uint32));
 
         
 
-                // Render texture to screen
-
-                SDL_RenderCopy(renderer, viewportTexture, nullptr, nullptr);
+                // Render texture to screen with explicit scaling
+                SDL_Rect destRect = {0, 0, actualWindowW, actualWindowH};
+                SDL_RenderCopy(renderer, viewportTexture, nullptr, &destRect);
 
         
 
@@ -978,47 +1052,27 @@ int main(int argc, char* argv[]) {
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 
         
-
                 // Render scene objects (sprites)
-
                 for (const auto& obj : world.getSceneObjects()) {
-
                     if (!obj || !obj->isVisible()) continue;
-
         
-
                     Sprite* spr = obj->getSprite();
-
                     if (!spr || !spr->isLoaded()) continue;
-
         
-
                     int screenX = (int)((obj->getX() - cam.x) * scaleX);
-
                     int screenY = (int)((obj->getY() - cam.y) * scaleY);
-
                     int screenW = (int)(spr->getWidth() * scaleX);
-
                     int screenH = (int)(spr->getHeight() * scaleY);
-
         
-
                     SDL_Texture* tex = spr->getTexture();
-
                     SDL_Rect dstRect = {screenX, screenY, screenW, screenH};
-
                     SDL_RenderCopy(renderer, tex, nullptr, &dstRect);
-
+                    obj->renderHealthBar(renderer, cam.x, cam.y, scaleX, scaleY);
                 }
 
-        
-
                 // Render collectible explosion particles
-
                 for (auto& collectible : collectibles) {
-
                     collectible->render(renderer, cam.x, cam.y, scaleX, scaleY);
-
                 }
 
         
@@ -1032,254 +1086,38 @@ int main(int argc, char* argv[]) {
                 }
 
         
+                // Render enemies
+                for (auto& jumper : purpleJumpers) {
+                    jumper.render(renderer, cam.x, cam.y, scaleX, scaleY);
+                    jumper.renderHealthBar(renderer, cam.x, cam.y, scaleX, scaleY);
+                }
 
-                        // Draw outlines for awake chunks
-
-        
-
-                        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-
-        
-
-                        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 100); // Green, semi-transparent
-
-        
-
-                        const auto& chunks = world.getChunks();
-
-        
-
-                        for (const auto& [key, chunk] : chunks) {
-
-        
-
-                            if (chunk && !chunk->isSleeping()) {
-
-        
-
-                                SDL_Rect chunkRect;
-
-        
-
-                                chunkRect.x = (int)((chunk->getWorldX() - cam.x) * scaleX);
-
-        
-
-                                chunkRect.y = (int)((chunk->getWorldY() - cam.y) * scaleY);
-
-        
-
-                                chunkRect.w = (int)(WorldChunk::CHUNK_SIZE * scaleX);
-
-        
-
-                                chunkRect.h = (int)(WorldChunk::CHUNK_SIZE * scaleY);
-
-        
-
-                                SDL_RenderDrawRect(renderer, &chunkRect);
-
-        
-
-                            }
-
-        
-
+                        // Debug chunk outlines disabled
+                // Draw outlines for awake particle chunks
+                SDL_SetRenderDrawColor(renderer, 255, 0, 0, 100); // Red, semi-transparent
+                int p_visWorldX_start, p_visWorldY_start, p_visWorldX_end, p_visWorldY_end;
+                world.getVisibleRegion(p_visWorldX_start, p_visWorldY_start, p_visWorldX_end, p_visWorldY_end);
+                int startPCX, startPCY, endPCX, endPCY;
+                World::worldToParticleChunk(p_visWorldX_start, p_visWorldY_start, startPCX, startPCY);
+                World::worldToParticleChunk(p_visWorldX_end - 1, p_visWorldY_end - 1, endPCX, endPCY);
+                const auto& particleChunks = world.getParticleChunks();
+                for (int pcY = startPCY; pcY <= endPCY; ++pcY) {
+                    for (int pcX = startPCX; pcX <= endPCX; ++pcX) {
+                        if(pcX < 0 || pcX >= World::P_CHUNKS_X || pcY < 0 || pcY >= World::P_CHUNKS_Y) continue;
+                        int pcIndex = pcY * World::P_CHUNKS_X + pcX;
+                        if (particleChunks[pcIndex].isAwake) {
+                            SDL_Rect rect;
+                            rect.x = (int)((pcX * World::PARTICLE_CHUNK_WIDTH - cam.x) * scaleX);
+                            rect.y = (int)((pcY * World::PARTICLE_CHUNK_HEIGHT - cam.y) * scaleY);
+                            rect.w = (int)(World::PARTICLE_CHUNK_WIDTH * scaleX);
+                            rect.h = (int)(World::PARTICLE_CHUNK_HEIGHT * scaleY);
+                            SDL_RenderDrawRect(renderer, &rect);
                         }
-
-        
-
-                
-
-        
-
-                                // Draw outlines for awake particle chunks
-
-        
-
-                
-
-        
-
-                                SDL_SetRenderDrawColor(renderer, 255, 0, 0, 100); // Red, semi-transparent
-
-        
-
-                
-
-        
-
-                                int p_visWorldX_start, p_visWorldY_start, p_visWorldX_end, p_visWorldY_end;
-
-        
-
-                
-
-        
-
-                                world.getVisibleRegion(p_visWorldX_start, p_visWorldY_start, p_visWorldX_end, p_visWorldY_end);
-
-        
-
-                
-
-        
-
-                                int startPCX, startPCY, endPCX, endPCY;
-
-        
-
-                
-
-        
-
-                                World::worldToParticleChunk(p_visWorldX_start, p_visWorldY_start, startPCX, startPCY);
-
-        
-
-                
-
-        
-
-                                World::worldToParticleChunk(p_visWorldX_end - 1, p_visWorldY_end - 1, endPCX, endPCY);
-
-        
-
-                
-
-        
-
-                                const auto& particleChunks = world.getParticleChunks();
-
-        
-
-                
-
-        
-
-                                for (int pcY = startPCY; pcY <= endPCY; ++pcY) {
-
-        
-
-                
-
-        
-
-                                    for (int pcX = startPCX; pcX <= endPCX; ++pcX) {
-
-        
-
-                
-
-        
-
-                                        if(pcX < 0 || pcX >= World::P_CHUNKS_X || pcY < 0 || pcY >= World::P_CHUNKS_Y) continue;
-
-        
-
-                
-
-        
-
-                                        int pcIndex = pcY * World::P_CHUNKS_X + pcX;
-
-        
-
-                
-
-        
-
-                                        if (particleChunks[pcIndex].isAwake) {
-
-        
-
-                
-
-        
-
-                                            SDL_Rect rect;
-
-        
-
-                
-
-        
-
-                                            rect.x = (int)((pcX * World::PARTICLE_CHUNK_WIDTH - cam.x) * scaleX);
-
-        
-
-                
-
-        
-
-                                            rect.y = (int)((pcY * World::PARTICLE_CHUNK_HEIGHT - cam.y) * scaleY);
-
-        
-
-                
-
-        
-
-                                            rect.w = (int)(World::PARTICLE_CHUNK_WIDTH * scaleX);
-
-        
-
-                
-
-        
-
-                                            rect.h = (int)(World::PARTICLE_CHUNK_HEIGHT * scaleY);
-
-        
-
-                
-
-        
-
-                                            SDL_RenderDrawRect(renderer, &rect);
-
-        
-
-                
-
-        
-
-                                        }
-
-        
-
-                
-
-        
-
-                                    }
-
-        
-
-                
-
-        
-
-                                }
-
-        
-
-                
-
-        
-
-                        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-
-        
-
-                
-
-        
+                    }
+                }
+                SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
 
                         // Draw player colliders (disabled)
-
-        
 
                         // const auto& p_box = player->getCollider();
 
@@ -1292,6 +1130,7 @@ int main(int argc, char* argv[]) {
                 drawDropdown(renderer, font, volumeDropdown);
 
                 drawDropdown(renderer, font, fpsDropdown);
+
 
         
 
@@ -1309,8 +1148,6 @@ int main(int argc, char* argv[]) {
 
                     fpsTimer = currentTime;
 
-                    std::cout << "Sim: " << last_sim_time << "ms, Render: " << last_render_time << "ms, FPS: " << (int)currentFPS << std::endl;
-
                 }
 
         
@@ -1321,7 +1158,7 @@ int main(int argc, char* argv[]) {
 
                 std::string fpsText = "FPS: " + std::to_string((int)currentFPS);
 
-                drawCachedText(renderer, smallFont, fpsCache, fpsText, 5, displayMode.h - 15, whiteColor);
+                drawCachedText(renderer, smallFont, fpsCache, fpsText, 5, actualWindowH - 15, whiteColor);
 
         
 
@@ -1331,15 +1168,15 @@ int main(int argc, char* argv[]) {
 
                 std::string posText = "Pos: " + std::to_string((int)playerCenterX) + ", " + std::to_string((int)playerCenterY);
 
-                drawCachedText(renderer, smallFont, posCache, posText, 5, displayMode.h - 30, whiteColor);
+                drawCachedText(renderer, smallFont, posCache, posText, 5, actualWindowH - 30, whiteColor);
 
         
 
                 // Draw particle counts
 
-                int yOffset = 5;
+                int yOffset = actualWindowH - (12 * 9) - 5; // 9 lines of text, 12 pixels per line, 5 pixels padding
 
-                int xPos = displayMode.w - 100;
+                int xPos = actualWindowW - 100;
 
         
 
@@ -1439,7 +1276,7 @@ int main(int argc, char* argv[]) {
 
                 SDL_Color hintColor = {150, 150, 150, 255};
 
-                drawText(renderer, smallFont, "WASD to move, Shift for fast", 5, displayMode.h - 45, hintColor);
+                drawText(renderer, smallFont, "WASD to move, Shift for fast", 5, actualWindowH - 45, hintColor);
 
         
 
@@ -1467,3 +1304,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+

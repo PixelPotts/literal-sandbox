@@ -34,7 +34,7 @@ struct Camera {
     // Target tracking
     float targetX, targetY; // Where camera wants to be
 
-    Camera() : x(0), y(0), viewportWidth(1920), viewportHeight(1080), moveSpeed(25.0f),
+    Camera() : x(0), y(0), viewportWidth(12), viewportHeight(12), moveSpeed(25.0f),
                deadzoneWidth(200.0f), deadzoneHeight(120.0f),
                smoothSpeed(4.0f),
                lookAheadX(0), lookAheadY(0),
@@ -145,6 +145,18 @@ struct ParticleChunk {
     int stableFrames = 0;
 };
 
+// Enemy spawn marker types (detected from level image colors)
+enum class SpawnMarkerType {
+    LITTLE_PURPLE_JUMPER  // #450981 - RGB(69, 9, 129)
+};
+
+struct EnemySpawnPoint {
+    int worldX;
+    int worldY;
+    SpawnMarkerType type;
+    bool spawned;  // Has an enemy been created here?
+};
+
 
 class World {
 public:
@@ -155,8 +167,8 @@ public:
     static constexpr int WORLD_HEIGHT = WORLD_CHUNKS_Y * WorldChunk::CHUNK_SIZE;  // 35,840
 
     // Particle chunk properties
-    static constexpr int PARTICLE_CHUNK_WIDTH = 50;
-    static constexpr int PARTICLE_CHUNK_HEIGHT = 100;
+    static constexpr int PARTICLE_CHUNK_WIDTH = 10;
+    static constexpr int PARTICLE_CHUNK_HEIGHT = 10;
     static constexpr int P_CHUNKS_X = (WORLD_WIDTH + PARTICLE_CHUNK_WIDTH - 1) / PARTICLE_CHUNK_WIDTH;
     static constexpr int P_CHUNKS_Y = (WORLD_HEIGHT + PARTICLE_CHUNK_HEIGHT - 1) / PARTICLE_CHUNK_HEIGHT;
     static constexpr int P_CHUNK_FRAMES_UNTIL_SLEEP = 15;
@@ -233,6 +245,10 @@ public:
 
     const std::vector<ParticleChunk>& getParticleChunks() const { return particleChunks; }
 
+    // Enemy spawn points detected from level image markers
+    std::vector<EnemySpawnPoint>& getEnemySpawnPoints() { return enemySpawnPoints; }
+    const std::vector<EnemySpawnPoint>& getEnemySpawnPoints() const { return enemySpawnPoints; }
+
     // Check if a world position is blocked by a scene object
     bool isBlockedBySceneObject(int worldX, int worldY) const;
 
@@ -259,6 +275,9 @@ private:
 
     // Scene objects (non-particle entities)
     std::vector<std::shared_ptr<SceneObject>> sceneObjects;
+
+    // Enemy spawn points detected from marker colors in level image
+    std::vector<EnemySpawnPoint> enemySpawnPoints;
 
     // Simulation helpers
     void updateParticle(int worldX, int worldY);

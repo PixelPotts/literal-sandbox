@@ -168,6 +168,14 @@ void Texturize::applyRockBorders(World* world, WorldChunk* chunk) {
     int chunkWorldY = chunk->getWorldY();
     int borderWidth = config.rock.borderWidth;
     bool islandExcluded = config.rock.borderIslandExcluded;
+    bool ignoreMoss = config.rock.borderIgnoreMoss;
+
+    // Helper to check if a particle counts as "rock" for border purposes
+    auto isRockLike = [ignoreMoss](ParticleType type) {
+        if (type == ParticleType::ROCK) return true;
+        if (ignoreMoss && type == ParticleType::MOSS) return true;
+        return false;
+    };
 
     // Expanded area to detect islands - use larger area for better detection
     int expandSize = 64; // Large enough to detect most holes
@@ -176,7 +184,7 @@ void Texturize::applyRockBorders(World* world, WorldChunk* chunk) {
     int areaStartY = chunkWorldY - expandSize;
 
     // Map to track which non-rock pixels are islands (enclosed by rock)
-    // 0 = rock, -1 = non-rock unclassified, 1 = exterior, 2 = island
+    // 0 = rock-like, -1 = non-rock unclassified, 1 = exterior, 2 = island
     std::vector<std::vector<int>> regionMap(areaSize, std::vector<int>(areaSize, 0));
 
     // First pass: mark all non-rock pixels
@@ -187,8 +195,8 @@ void Texturize::applyRockBorders(World* world, WorldChunk* chunk) {
 
             if (!world->inWorldBounds(worldX, worldY)) {
                 regionMap[y][x] = -1; // Out of bounds = non-rock
-            } else if (world->getParticle(worldX, worldY) != ParticleType::ROCK) {
-                regionMap[y][x] = -1; // Any non-rock material
+            } else if (!isRockLike(world->getParticle(worldX, worldY))) {
+                regionMap[y][x] = -1; // Non-rock material
             }
         }
     }
@@ -326,6 +334,197 @@ void Texturize::applyRockBorders(World* world, WorldChunk* chunk) {
             }
 
             // Exterior edge: full gradient
+            float t = dist / static_cast<float>(borderWidth);
+            t = std::max(0.0f, std::min(1.0f, t));
+            float smoothT = t * t * (3.0f - 2.0f * t);
+            float colorMult = outerMult + (innerMult - outerMult) * smoothT;
+
+            bool applyPattern = true;
+            if (isDotted) {
+                int patternPeriodX = dotWidth + dotSpacing;
+                int patternPeriodY = dotHeight + dotSpacing;
+                int posInPatternX = ((worldX % patternPeriodX) + patternPeriodX) % patternPeriodX;
+                int posInPatternY = ((worldY % patternPeriodY) + patternPeriodY) % patternPeriodY;
+                applyPattern = (posInPatternX < dotWidth && posInPatternY < dotHeight);
+            }
+
+            if (applyPattern) {
+                ParticleColor color = world->getColor(worldX, worldY);
+                world->setColor(worldX, worldY, {
+                    static_cast<unsigned char>(std::max(0.0f, std::min(255.0f,
+                        static_cast<float>(color.r) * colorMult))),
+                    static_cast<unsigned char>(std::max(0.0f, std::min(255.0f,
+                        static_cast<float>(color.g) * colorMult))),
+                    static_cast<unsigned char>(std::max(0.0f, std::min(255.0f,
+                        static_cast<float>(color.b) * colorMult)))
+                });
+            }
+        }
+    }
+}
+
+void Texturize::applyObsidianBorders(World* world, WorldChunk* chunk) {
+    if (!world || !chunk) return;
+
+    const Config& config = world->getConfig();
+    if (!config.obsidian.borderEnabled) return;
+
+    int chunkWorldX = chunk->getWorldX();
+    int chunkWorldY = chunk->getWorldY();
+    int borderWidth = config.obsidian.borderWidth;
+    bool islandExcluded = config.obsidian.borderIslandExcluded;
+    bool ignoreMoss = config.obsidian.borderIgnoreMoss;
+
+    // Helper to check if a particle counts as "obsidian" for border purposes
+    auto isObsidianLike = [ignoreMoss](ParticleType type) {
+        if (type == ParticleType::OBSIDIAN) return true;
+        if (ignoreMoss && type == ParticleType::MOSS) return true;
+        return false;
+    };
+
+    int expandSize = 64;
+    int areaSize = WorldChunk::CHUNK_SIZE + expandSize * 2;
+    int areaStartX = chunkWorldX - expandSize;
+    int areaStartY = chunkWorldY - expandSize;
+
+    std::vector<std::vector<int>> regionMap(areaSize, std::vector<int>(areaSize, 0));
+
+    for (int y = 0; y < areaSize; ++y) {
+        for (int x = 0; x < areaSize; ++x) {
+            int worldX = areaStartX + x;
+            int worldY = areaStartY + y;
+
+            if (!world->inWorldBounds(worldX, worldY)) {
+                regionMap[y][x] = -1;
+            } else if (!isObsidianLike(world->getParticle(worldX, worldY))) {
+                regionMap[y][x] = -1;
+            }
+        }
+    }
+
+    std::vector<std::pair<int, int>> queue;
+    for (int x = 0; x < areaSize; ++x) {
+        if (regionMap[0][x] == -1) queue.push_back({x, 0});
+        if (regionMap[areaSize-1][x] == -1) queue.push_back({x, areaSize-1});
+    }
+    for (int y = 1; y < areaSize - 1; ++y) {
+        if (regionMap[y][0] == -1) queue.push_back({0, y});
+        if (regionMap[y][areaSize-1] == -1) queue.push_back({areaSize-1, y});
+    }
+
+    while (!queue.empty()) {
+        auto [x, y] = queue.back();
+        queue.pop_back();
+
+        if (x < 0 || x >= areaSize || y < 0 || y >= areaSize) continue;
+        if (regionMap[y][x] != -1) continue;
+
+        regionMap[y][x] = 1;
+
+        queue.push_back({x-1, y});
+        queue.push_back({x+1, y});
+        queue.push_back({x, y-1});
+        queue.push_back({x, y+1});
+    }
+
+    for (int y = 0; y < areaSize; ++y) {
+        for (int x = 0; x < areaSize; ++x) {
+            if (regionMap[y][x] == -1) {
+                regionMap[y][x] = 2;
+            }
+        }
+    }
+
+    std::vector<std::vector<float>> distanceMap(WorldChunk::CHUNK_SIZE,
+        std::vector<float>(WorldChunk::CHUNK_SIZE, static_cast<float>(borderWidth + 1)));
+    std::vector<std::vector<bool>> adjacentToIsland(WorldChunk::CHUNK_SIZE,
+        std::vector<bool>(WorldChunk::CHUNK_SIZE, false));
+
+    for (int y = 0; y < WorldChunk::CHUNK_SIZE; ++y) {
+        for (int x = 0; x < WorldChunk::CHUNK_SIZE; ++x) {
+            int worldX = chunkWorldX + x;
+            int worldY = chunkWorldY + y;
+
+            if (world->getParticle(worldX, worldY) != ParticleType::OBSIDIAN) {
+                distanceMap[y][x] = 0.0f;
+                continue;
+            }
+
+            float minDist = static_cast<float>(borderWidth + 1);
+            bool nearestIsIsland = false;
+
+            for (int dy = -borderWidth; dy <= borderWidth; ++dy) {
+                for (int dx = -borderWidth; dx <= borderWidth; ++dx) {
+                    int checkX = worldX + dx;
+                    int checkY = worldY + dy;
+
+                    int areaX = checkX - areaStartX;
+                    int areaY = checkY - areaStartY;
+
+                    if (areaX < 0 || areaX >= areaSize || areaY < 0 || areaY >= areaSize) {
+                        float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearestIsIsland = false;
+                        }
+                        continue;
+                    }
+
+                    int region = regionMap[areaY][areaX];
+                    if (region == 1 || region == 2) {
+                        float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearestIsIsland = (region == 2);
+                        }
+                    }
+                }
+            }
+            distanceMap[y][x] = minDist;
+            adjacentToIsland[y][x] = nearestIsIsland;
+        }
+    }
+
+    float outerMult = config.obsidian.borderGradientOuterEdgeColorMultiplier;
+    float innerMult = config.obsidian.borderGradientInnerEdgeColorMultiplier;
+    bool isDotted = (config.obsidian.borderPattern == "dotted");
+    int dotWidth = config.obsidian.borderPatternDottedDotWidth;
+    int dotHeight = config.obsidian.borderPatternDottedDotHeight;
+    int dotSpacing = config.obsidian.borderPatternDottedSpacing;
+
+    for (int y = 0; y < WorldChunk::CHUNK_SIZE; ++y) {
+        for (int x = 0; x < WorldChunk::CHUNK_SIZE; ++x) {
+            int worldX = chunkWorldX + x;
+            int worldY = chunkWorldY + y;
+
+            if (world->getParticle(worldX, worldY) != ParticleType::OBSIDIAN) {
+                continue;
+            }
+
+            float dist = distanceMap[y][x];
+
+            if (dist > static_cast<float>(borderWidth)) {
+                continue;
+            }
+
+            bool isIslandEdge = islandExcluded && adjacentToIsland[y][x];
+
+            if (isIslandEdge) {
+                if (dist <= 1.5f) {
+                    float islandMult = 1.0f - (1.0f - outerMult) * 0.5f;
+                    ParticleColor color = world->getColor(worldX, worldY);
+                    world->setColor(worldX, worldY, {
+                        static_cast<unsigned char>(std::max(0.0f, std::min(255.0f,
+                            static_cast<float>(color.r) * islandMult))),
+                        static_cast<unsigned char>(std::max(0.0f, std::min(255.0f,
+                            static_cast<float>(color.g) * islandMult))),
+                        static_cast<unsigned char>(std::max(0.0f, std::min(255.0f,
+                            static_cast<float>(color.b) * islandMult)))
+                    });
+                }
+                continue;
+            }
+
             float t = dist / static_cast<float>(borderWidth);
             t = std::max(0.0f, std::min(1.0f, t));
             float smoothT = t * t * (3.0f - 2.0f * t);

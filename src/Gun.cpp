@@ -13,6 +13,7 @@ Gun::Gun()
     , lastFireTime(0)
     , spriteWidth(0)
     , spriteHeight(0)
+    , damage(3)
 {
 }
 
@@ -136,7 +137,7 @@ void Gun::getMuzzlePosition(float& outX, float& outY) const {
 }
 
 void Gun::fire(std::vector<Bullet>& bullets, float startX, float startY, float targetX, float targetY) {
-    bullets.emplace_back(startX, startY, targetX, targetY);
+    bullets.emplace_back(startX, startY, targetX, targetY, damage);
     lastFireTime = SDL_GetTicks(); // Update last fire time internally
 }
 

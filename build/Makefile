@@ -225,6 +225,54 @@ src/Gun.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Gun.cpp.s
 .PHONY : src/Gun.cpp.s
 
+src/LittlePurpleJumper.o: src/LittlePurpleJumper.cpp.o
+.PHONY : src/LittlePurpleJumper.o
+
+# target to build an object file
+src/LittlePurpleJumper.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/LittlePurpleJumper.cpp.o
+.PHONY : src/LittlePurpleJumper.cpp.o
+
+src/LittlePurpleJumper.i: src/LittlePurpleJumper.cpp.i
+.PHONY : src/LittlePurpleJumper.i
+
+# target to preprocess a source file
+src/LittlePurpleJumper.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/LittlePurpleJumper.cpp.i
+.PHONY : src/LittlePurpleJumper.cpp.i
+
+src/LittlePurpleJumper.s: src/LittlePurpleJumper.cpp.s
+.PHONY : src/LittlePurpleJumper.s
+
+# target to generate assembly for a file
+src/LittlePurpleJumper.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/LittlePurpleJumper.cpp.s
+.PHONY : src/LittlePurpleJumper.cpp.s
+
+src/MainSprite.o: src/MainSprite.cpp.o
+.PHONY : src/MainSprite.o
+
+# target to build an object file
+src/MainSprite.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/MainSprite.cpp.o
+.PHONY : src/MainSprite.cpp.o
+
+src/MainSprite.i: src/MainSprite.cpp.i
+.PHONY : src/MainSprite.i
+
+# target to preprocess a source file
+src/MainSprite.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/MainSprite.cpp.i
+.PHONY : src/MainSprite.cpp.i
+
+src/MainSprite.s: src/MainSprite.cpp.s
+.PHONY : src/MainSprite.s
+
+# target to generate assembly for a file
+src/MainSprite.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/MainSprite.cpp.s
+.PHONY : src/MainSprite.cpp.s
+
 src/SandSimulator.o: src/SandSimulator.cpp.o
 .PHONY : src/SandSimulator.o
 
@@ -369,6 +417,30 @@ src/WorldChunk.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/WorldChunk.cpp.s
 .PHONY : src/WorldChunk.cpp.s
 
+src/ZLayers.o: src/ZLayers.cpp.o
+.PHONY : src/ZLayers.o
+
+# target to build an object file
+src/ZLayers.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/ZLayers.cpp.o
+.PHONY : src/ZLayers.cpp.o
+
+src/ZLayers.i: src/ZLayers.cpp.i
+.PHONY : src/ZLayers.i
+
+# target to preprocess a source file
+src/ZLayers.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/ZLayers.cpp.i
+.PHONY : src/ZLayers.cpp.i
+
+src/ZLayers.s: src/ZLayers.cpp.s
+.PHONY : src/ZLayers.s
+
+# target to generate assembly for a file
+src/ZLayers.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/ZLayers.cpp.s
+.PHONY : src/ZLayers.cpp.s
+
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
 
@@ -438,6 +510,12 @@ help:
 	@echo "... src/Gun.o"
 	@echo "... src/Gun.i"
 	@echo "... src/Gun.s"
+	@echo "... src/LittlePurpleJumper.o"
+	@echo "... src/LittlePurpleJumper.i"
+	@echo "... src/LittlePurpleJumper.s"
+	@echo "... src/MainSprite.o"
+	@echo "... src/MainSprite.i"
+	@echo "... src/MainSprite.s"
 	@echo "... src/SandSimulator.o"
 	@echo "... src/SandSimulator.i"
 	@echo "... src/SandSimulator.s"
@@ -456,6 +534,9 @@ help:
 	@echo "... src/WorldChunk.o"
 	@echo "... src/WorldChunk.i"
 	@echo "... src/WorldChunk.s"
+	@echo "... src/ZLayers.o"
+	@echo "... src/ZLayers.i"
+	@echo "... src/ZLayers.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

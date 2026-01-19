@@ -2,8 +2,13 @@
 #include "SDL.h" // For Uint32
 #include <iostream>
 
+#include "Bullet.h"
+#include "SDL.h" // For Uint32
+#include <iostream>
+#include "LittlePurpleJumper.h"
+
 // Update bullet position, return true if hit something
-bool Bullet::update(World& world, float deltaTime) {
+bool Bullet::update(World& world, float deltaTime, std::vector<LittlePurpleJumper>& enemies) {
     if (!active) return false;
 
     // Store current position for trail
@@ -24,16 +29,18 @@ bool Bullet::update(World& world, float deltaTime) {
         int checkX = (int)(x + stepX * i);
         int checkY = (int)(y + stepY * i);
 
-        // Check world bounds
-        if (!world.inWorldBounds(checkX, checkY)) {
-            active = false;
-            return false;
+        // Check for collision with scene objects
+        for (auto& enemy : enemies) {
+            if (enemy.isActive() && checkX >= enemy.getX() && checkX < enemy.getX() + enemy.getWidth() &&
+                checkY >= enemy.getY() && checkY < enemy.getY() + enemy.getHeight()) {
+                enemy.takeDamage(damage);
+                active = false;
+                return true;
+            }
         }
 
         // Check for particle hit
         if (world.isOccupied(checkX, checkY)) {
-            // Explode at this position
-            world.explodeAt(checkX, checkY, EXPLOSION_RADIUS, EXPLOSION_FORCE);
             active = false;
             return true;
         }
@@ -45,50 +52,44 @@ bool Bullet::update(World& world, float deltaTime) {
 }
 
 // Draw bullet
-void Bullet::draw(std::vector<Uint32>& pixels, int viewportWidth, int viewportHeight, float cameraX, float cameraY, SDL_Renderer* renderer) {
+void Bullet::draw(std::vector<Uint32>& pixels, int viewportWidth, int viewportHeight, float cameraX, float cameraY, SDL_Renderer* renderer) { // Removed scaleX, scaleY
     if (!active) return;
 
-    int screenX = (int)(x - cameraX);
-    int screenY = (int)(y - cameraY);
+    // Calculate unscaled screen coordinates for the bullet's center
+    int bulletScreenX = (int)(x - cameraX);
+    int bulletScreenY = (int)(y - cameraY);
 
-    // Draw the purple cross (5x5)
-    // R: 128 (80), G: 0 (00), B: 128 (80)
-    const Uint32 purple = 0x800080; // A darker purple
-    for (int i = -2; i <= 2; i++) {
-        // Horizontal line
-        int px = screenX + i;
-        int py = screenY;
-        if (px >= 0 && px < viewportWidth && py >= 0 && py < viewportHeight) {
-            pixels[py * viewportWidth + px] = purple;
-        }
-        // Vertical line
-        px = screenX;
-        py = screenY + i;
-        if (px >= 0 && px < viewportWidth && py >= 0 && py < viewportHeight) {
-            pixels[py * viewportWidth + px] = purple;
+    // Draw the main bullet body (a pink square) directly into the pixels array
+    const Uint32 pinkColor = 0xFF69B4; // Opaque pink (RGB)
+    int bulletSize = 1; // Default pixel size for the bullet in the logical viewport
+
+    for (int dy = -bulletSize; dy <= bulletSize; ++dy) {
+        for (int dx = -bulletSize; dx <= bulletSize; ++dx) {
+            int px = bulletScreenX + dx;
+            int py = bulletScreenY + dy;
+            if (px >= 0 && px < viewportWidth && py >= 0 && py < viewportHeight) {
+                pixels[py * viewportWidth + px] = 0xFF000000 | pinkColor; // Add opaque alpha
+            }
         }
     }
 
-    // Draw the trail (simple fading dots for now)
-    // To implement the "sin wave-y purple dust magic", I'll need a more advanced particle system or
-    // custom drawing logic, potentially using SDL_RenderDrawPoint with alpha blending.
-    // For now, I'll draw fading dots.
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND); // Enable blending for alpha
+    // Draw the trail (simple fading dots) directly into the pixels array
     for (size_t i = 0; i < trail.size(); ++i) {
         float trailX = trail[i].first;
         float trailY = trail[i].second;
 
+        // Calculate unscaled trail points
         int trailScreenX = (int)(trailX - cameraX);
         int trailScreenY = (int)(trailY - cameraY);
 
         if (trailScreenX >= 0 && trailScreenX < viewportWidth &&
             trailScreenY >= 0 && trailScreenY < viewportHeight) {
 
-            // Fade out the trail
+            // Fade out the trail by adjusting the alpha component of the pink color
             Uint8 alpha = 255 - (Uint8)(i * (255 / TRAIL_LENGTH));
-            SDL_SetRenderDrawColor(renderer, 0x80, 0x00, 0x80, alpha); // Purple with fading alpha
-            SDL_RenderDrawPoint(renderer, trailScreenX, trailScreenY);
+            Uint32 fadedPink = (alpha << 24) | pinkColor; // ARGB format
+
+            pixels[trailScreenY * viewportWidth + trailScreenX] = fadedPink;
         }
     }
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE); // Disable blending
 }

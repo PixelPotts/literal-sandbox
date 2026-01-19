@@ -1,4 +1,5 @@
 #include "SceneObject.h"
+#include <iostream>
 
 SceneObject::SceneObject()
     : x(0), y(0)
@@ -11,7 +12,16 @@ SceneObject::SceneObject()
     , visible(true)
     , staticObject(false)
     , blockParticles(false)
+    , hp(10), maxHp(10)
 {
+}
+
+void SceneObject::takeDamage(int amount) {
+    hp -= amount;
+    if (hp < 0) {
+        hp = 0;
+    }
+    std::cout << "Object took " << amount << " damage, " << hp << " hp remaining." << std::endl;
 }
 
 void SceneObject::setCollider(float cx, float cy, float cw, float ch) {
@@ -77,4 +87,34 @@ void SceneObject::setCapsuleCollider(float offsetX, float offsetY, float radius,
     capsule.radius = radius;
     capsule.height = height;
     capsuleEnabled = true;
+}
+
+void SceneObject::renderHealthBar(SDL_Renderer* renderer, float cameraX, float cameraY, float scaleX, float scaleY) const {
+    if (!sprite || hp <= 0 || hp == maxHp) return;
+
+    float barWidth = 20.0f; // Width of the health bar in world units
+    float barHeight = 2.0f; // Height of the health bar in world units
+    float barYOffset = -5.0f; // Offset above the sprite
+
+    float healthPercentage = (float)hp / (float)maxHp;
+
+    // Background of the health bar (red)
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+    SDL_Rect bgRect = {
+        (int)((x - cameraX + (sprite->getWidth() - barWidth) / 2.0f) * scaleX),
+        (int)((y - cameraY + barYOffset) * scaleY),
+        (int)(barWidth * scaleX),
+        (int)(barHeight * scaleY)
+    };
+    SDL_RenderFillRect(renderer, &bgRect);
+
+    // Foreground of the health bar (green)
+    SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+    SDL_Rect fgRect = {
+        (int)((x - cameraX + (sprite->getWidth() - barWidth) / 2.0f) * scaleX),
+        (int)((y - cameraY + barYOffset) * scaleY),
+        (int)(barWidth * healthPercentage * scaleX),
+        (int)(barHeight * scaleY)
+    };
+    SDL_RenderFillRect(renderer, &fgRect);
 }

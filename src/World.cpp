@@ -119,6 +119,9 @@ WorldChunk* World::getChunk(int chunkX, int chunkY) {
     obsidianParams.colorMultiplier = config.obsidian.innerRockDarkness;
     texturizer.apply(this, ptr, ParticleType::OBSIDIAN, obsidianParams);
 
+    // Apply obsidian borders (gradient + pattern on edges)
+    texturizer.applyObsidianBorders(this, ptr);
+
     return ptr;
 }
 
@@ -241,6 +244,19 @@ void World::populateChunkFromScene(WorldChunk* chunk) {
 
             // Skip dark pixels (empty/background) - be more aggressive
             if (r < 30 && g < 30 && b < 30) continue;
+
+            // Check for enemy spawn markers FIRST (before particle matching)
+            // #450981 = RGB(69, 9, 129) - Little Purple Jumper
+            int markerDist = colorDistance(r, g, b, 69, 9, 129);
+            if (markerDist < 500) {  // Tight threshold for exact marker match
+                EnemySpawnPoint spawn;
+                spawn.worldX = worldX;
+                spawn.worldY = worldY;
+                spawn.type = SpawnMarkerType::LITTLE_PURPLE_JUMPER;
+                spawn.spawned = false;
+                enemySpawnPoints.push_back(spawn);
+                continue;  // Don't create a particle here
+            }
 
             ParticleType bestMatch = ParticleType::EMPTY;
             int bestDist = threshold;
@@ -519,12 +535,13 @@ void World::spawnParticleAt(int worldX, int worldY, ParticleType type) {
     // Wake world chunk
     wakeChunkAtWorldPos(worldX, worldY);
 
-    // Wake particle chunk
+    // Wake particle chunk - set isAwake directly, not just activity flag
     int pcX, pcY;
     worldToParticleChunk(worldX, worldY, pcX, pcY);
     int pcIndex = pcY * P_CHUNKS_X + pcX;
-    if (pcIndex >= 0 && pcIndex < particleChunkActivity.size()) {
-        particleChunkActivity[pcIndex] = true;
+    if (pcIndex >= 0 && pcIndex < (int)particleChunks.size()) {
+        particleChunks[pcIndex].isAwake = true;
+        particleChunks[pcIndex].stableFrames = 0;
     }
 }
 
@@ -1008,10 +1025,14 @@ void World::updateParticle(int worldX, int worldY) {
 
 
 void World::update(float deltaTime) {
+    static int callCount = 0;
+    callCount++;
+    auto t0 = std::chrono::high_resolution_clock::now();
+
     loadChunksAroundCamera();
     unloadDistantChunks();
 
-    std::fill(particleChunkActivity.begin(), particleChunkActivity.end(), false);
+    auto t1 = std::chrono::high_resolution_clock::now();
 
     // Determine visible particle chunk range to simulate
     int visWorldX_start, visWorldY_start, visWorldX_end, visWorldY_end;
@@ -1027,6 +1048,20 @@ void World::update(float deltaTime) {
     endPCX = std::min(P_CHUNKS_X - 1, endPCX + 1);
     endPCY = std::min(P_CHUNKS_Y - 1, endPCY + 1);
 
+    // Clear activity only for visible region + border (not entire array)
+    for (int pcY = startPCY; pcY <= endPCY; ++pcY) {
+        for (int pcX = startPCX; pcX <= endPCX; ++pcX) {
+            particleChunkActivity[pcY * P_CHUNKS_X + pcX] = false;
+        }
+    }
+
+    auto t2 = std::chrono::high_resolution_clock::now();
+
+    static int updateCallCount = 0;
+    updateCallCount++;
+    int particlesUpdated = 0;
+    int chunksProcessed = 0;
+
     for (int pcY = endPCY; pcY >= startPCY; --pcY) {
         bool leftToRight = (pcY % 2 == 0);
         for (int i = 0; i < (endPCX - startPCX + 1); ++i) {
@@ -1036,6 +1071,7 @@ void World::update(float deltaTime) {
             if (!particleChunks[pcIndex].isAwake) {
                 continue;
             }
+            chunksProcessed++;
 
             int startWorldX = pcX * PARTICLE_CHUNK_WIDTH;
             int startWorldY = pcY * PARTICLE_CHUNK_HEIGHT;
@@ -1046,47 +1082,72 @@ void World::update(float deltaTime) {
                  if (y < 0 || y >= WORLD_HEIGHT) continue;
                 for (int x = startWorldX; x < endWorldX; ++x) {
                     if (x < 0 || x >= WORLD_WIDTH) continue;
-                    
+
                     ParticleType type = getParticle(x, y);
                     if (type != ParticleType::EMPTY) {
                         updateParticle(x, y);
+                        particlesUpdated++;
                     }
                 }
             }
         }
     }
 
-    // Update sleep states
-    for (int i = 0; i < particleChunks.size(); ++i) {
-        if (particleChunkActivity[i]) {
-            particleChunks[i].isAwake = true;
-            particleChunks[i].stableFrames = 0;
-            // Wake up neighbors
-            int pcX = i % P_CHUNKS_X;
-            int pcY = i / P_CHUNKS_X;
-            for (int dy = -1; dy <= 1; ++dy) {
-                for (int dx = -1; dx <= 1; ++dx) {
-                    if (dx == 0 && dy == 0) continue;
-                    int nPcX = pcX + dx;
-                    int nPcY = pcY + dy;
-                    if (nPcX >= 0 && nPcX < P_CHUNKS_X && nPcY >= 0 && nPcY < P_CHUNKS_Y) {
-                        int neighborIdx = nPcY * P_CHUNKS_X + nPcX;
-                        particleChunks[neighborIdx].isAwake = true;
-                        particleChunks[neighborIdx].stableFrames = 0;
+    auto t3 = std::chrono::high_resolution_clock::now();
+
+    // Update sleep states - ONLY for visible region + border, not all chunks!
+    int sleepStartPCX = std::max(0, startPCX - 2);
+    int sleepStartPCY = std::max(0, startPCY - 2);
+    int sleepEndPCX = std::min(P_CHUNKS_X - 1, endPCX + 2);
+    int sleepEndPCY = std::min(P_CHUNKS_Y - 1, endPCY + 2);
+
+    for (int pcY = sleepStartPCY; pcY <= sleepEndPCY; ++pcY) {
+        for (int pcX = sleepStartPCX; pcX <= sleepEndPCX; ++pcX) {
+            int i = pcY * P_CHUNKS_X + pcX;
+            if (particleChunkActivity[i]) {
+                particleChunks[i].isAwake = true;
+                particleChunks[i].stableFrames = 0;
+                // Wake up neighbors
+                for (int dy = -1; dy <= 1; ++dy) {
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        if (dx == 0 && dy == 0) continue;
+                        int nPcX = pcX + dx;
+                        int nPcY = pcY + dy;
+                        if (nPcX >= 0 && nPcX < P_CHUNKS_X && nPcY >= 0 && nPcY < P_CHUNKS_Y) {
+                            int neighborIdx = nPcY * P_CHUNKS_X + nPcX;
+                            particleChunks[neighborIdx].isAwake = true;
+                            particleChunks[neighborIdx].stableFrames = 0;
+                        }
                     }
                 }
-            }
-        } else {
-            if (particleChunks[i].isAwake) {
-                particleChunks[i].stableFrames++;
-                if (particleChunks[i].stableFrames > P_CHUNK_FRAMES_UNTIL_SLEEP) {
-                    particleChunks[i].isAwake = false;
+            } else {
+                if (particleChunks[i].isAwake) {
+                    particleChunks[i].stableFrames++;
+                    if (particleChunks[i].stableFrames > P_CHUNK_FRAMES_UNTIL_SLEEP) {
+                        particleChunks[i].isAwake = false;
+                    }
                 }
             }
         }
     }
+
+    auto t4 = std::chrono::high_resolution_clock::now();
+
+    // DEBUG: Print every 600 calls
+    // if (callCount % 600 == 0) {
+    //     auto loadTime = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
+    //     auto fillTime = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+    //     auto simTime = std::chrono::duration_cast<std::chrono::microseconds>(t3 - t2).count();
+    //     auto sleepTime = std::chrono::duration_cast<std::chrono::microseconds>(t4 - t3).count();
+    //     std::cout << "[WORLD] call=" << callCount
+    //               << " | load=" << loadTime << "us"
+    //               << " | fill=" << fillTime << "us"
+    //               << " | sim=" << simTime << "us"
+    //               << " | sleep=" << sleepTime << "us"
+    //               << " | chunks=" << chunksProcessed
+    //               << " | particles=" << particlesUpdated << std::endl;
+    // }
 }
-
 bool World::loadSceneFromBMP(const std::string& filepath, int worldOffsetX, int worldOffsetY) {
     int imgWidth, imgHeight, channels;
     unsigned char* data = stbi_load(filepath.c_str(), &imgWidth, &imgHeight, &channels, 3);

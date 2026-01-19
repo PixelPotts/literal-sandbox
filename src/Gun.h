@@ -29,6 +29,8 @@ public:
     // Check if gun is flipped (pointing left)
     bool isFlipped() const { return flipped; }
 
+    int damage;
+
     // Fire method
     void fire(std::vector<Bullet>& bullets, float startX, float startY, float targetX, float targetY);
 

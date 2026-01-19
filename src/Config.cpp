@@ -144,14 +144,15 @@ void Config::setDefaults() {
     rock.brickOutlineColorMultiplier = 0.5f;
 
     rock.borderEnabled = true;
-    rock.borderWidth = 3;
-    rock.borderGradientOuterEdgeColorMultiplier = 0.6f;
+    rock.borderWidth = 5;
+    rock.borderGradientOuterEdgeColorMultiplier = 0.75f;
     rock.borderGradientInnerEdgeColorMultiplier = 0.9f;
     rock.borderPattern = "";
     rock.borderPatternDottedDotWidth = 2;
     rock.borderPatternDottedDotHeight = 2;
     rock.borderPatternDottedSpacing = 2;
     rock.borderIslandExcluded = true;
+    rock.borderIgnoreMoss = true;
 
     // Lava defaults
     lava.colorR = 255;
@@ -259,6 +260,16 @@ void Config::setDefaults() {
     obsidian.innerRockMinRadius = 10.0f;
     obsidian.innerRockMaxRadius = 30.5f;
     obsidian.innerRockDarkness = 0.9f;
+    obsidian.borderEnabled = true;
+    obsidian.borderWidth = 5;
+    obsidian.borderGradientOuterEdgeColorMultiplier = 0.75f;
+    obsidian.borderGradientInnerEdgeColorMultiplier = 0.9f;
+    obsidian.borderPattern = "";
+    obsidian.borderPatternDottedDotWidth = 2;
+    obsidian.borderPatternDottedDotHeight = 2;
+    obsidian.borderPatternDottedSpacing = 2;
+    obsidian.borderIslandExcluded = true;
+    obsidian.borderIgnoreMoss = true;
 
     // Fire defaults
     fire.colorR = 255;

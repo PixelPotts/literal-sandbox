@@ -32,6 +32,9 @@ set(SOURCES
     src/Bullet.cpp
     src/Texturize.cpp
     src/stb_image_impl.cpp
+    src/ZLayers.cpp
+    src/MainSprite.cpp
+    src/LittlePurpleJumper.cpp
 )
 
 # Create executable
