@@ -1,4 +1,6 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.o"
+  "CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.o.d"
   "CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o"
   "CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o.d"
   "CMakeFiles/sand_simulator.dir/src/Collectible.cpp.o"

@@ -129,6 +129,30 @@ sand_simulator/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/build
 .PHONY : sand_simulator/fast
 
+src/BouncingBolt.o: src/BouncingBolt.cpp.o
+.PHONY : src/BouncingBolt.o
+
+# target to build an object file
+src/BouncingBolt.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.o
+.PHONY : src/BouncingBolt.cpp.o
+
+src/BouncingBolt.i: src/BouncingBolt.cpp.i
+.PHONY : src/BouncingBolt.i
+
+# target to preprocess a source file
+src/BouncingBolt.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.i
+.PHONY : src/BouncingBolt.cpp.i
+
+src/BouncingBolt.s: src/BouncingBolt.cpp.s
+.PHONY : src/BouncingBolt.s
+
+# target to generate assembly for a file
+src/BouncingBolt.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.s
+.PHONY : src/BouncingBolt.cpp.s
+
 src/Bullet.o: src/Bullet.cpp.o
 .PHONY : src/Bullet.o
 
@@ -498,6 +522,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... sand_simulator"
+	@echo "... src/BouncingBolt.o"
+	@echo "... src/BouncingBolt.i"
+	@echo "... src/BouncingBolt.s"
 	@echo "... src/Bullet.o"
 	@echo "... src/Bullet.i"
 	@echo "... src/Bullet.s"

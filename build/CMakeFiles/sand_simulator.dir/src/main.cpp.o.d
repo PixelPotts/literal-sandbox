@@ -360,7 +360,9 @@ CMakeFiles/sand_simulator.dir/src/main.cpp.o: \
  /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Collectible.h \
  /usr/include/SDL2/SDL_mixer.h \
  /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Gun.h \
+ /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Ammunition.h \
  /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Bullet.h \
  /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/ZLayers.h \
  /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/MainSprite.h \
- /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/LittlePurpleJumper.h
+ /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/LittlePurpleJumper.h \
+ /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/BouncingBolt.h
