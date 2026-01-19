@@ -129,6 +129,30 @@ sand_simulator/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/build
 .PHONY : sand_simulator/fast
 
+src/BouncingBolt.o: src/BouncingBolt.cpp.o
+.PHONY : src/BouncingBolt.o
+
+# target to build an object file
+src/BouncingBolt.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.o
+.PHONY : src/BouncingBolt.cpp.o
+
+src/BouncingBolt.i: src/BouncingBolt.cpp.i
+.PHONY : src/BouncingBolt.i
+
+# target to preprocess a source file
+src/BouncingBolt.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.i
+.PHONY : src/BouncingBolt.cpp.i
+
+src/BouncingBolt.s: src/BouncingBolt.cpp.s
+.PHONY : src/BouncingBolt.s
+
+# target to generate assembly for a file
+src/BouncingBolt.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.s
+.PHONY : src/BouncingBolt.cpp.s
+
 src/Bullet.o: src/Bullet.cpp.o
 .PHONY : src/Bullet.o
 
@@ -201,6 +225,30 @@ src/Config.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/Config.cpp.s
 .PHONY : src/Config.cpp.s
 
+src/FireBolt.o: src/FireBolt.cpp.o
+.PHONY : src/FireBolt.o
+
+# target to build an object file
+src/FireBolt.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/FireBolt.cpp.o
+.PHONY : src/FireBolt.cpp.o
+
+src/FireBolt.i: src/FireBolt.cpp.i
+.PHONY : src/FireBolt.i
+
+# target to preprocess a source file
+src/FireBolt.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/FireBolt.cpp.i
+.PHONY : src/FireBolt.cpp.i
+
+src/FireBolt.s: src/FireBolt.cpp.s
+.PHONY : src/FireBolt.s
+
+# target to generate assembly for a file
+src/FireBolt.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/FireBolt.cpp.s
+.PHONY : src/FireBolt.cpp.s
+
 src/Gun.o: src/Gun.cpp.o
 .PHONY : src/Gun.o
 
@@ -248,6 +296,30 @@ src/LittlePurpleJumper.s: src/LittlePurpleJumper.cpp.s
 src/LittlePurpleJumper.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/LittlePurpleJumper.cpp.s
 .PHONY : src/LittlePurpleJumper.cpp.s
+
+src/MagicMissile.o: src/MagicMissile.cpp.o
+.PHONY : src/MagicMissile.o
+
+# target to build an object file
+src/MagicMissile.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/MagicMissile.cpp.o
+.PHONY : src/MagicMissile.cpp.o
+
+src/MagicMissile.i: src/MagicMissile.cpp.i
+.PHONY : src/MagicMissile.i
+
+# target to preprocess a source file
+src/MagicMissile.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/MagicMissile.cpp.i
+.PHONY : src/MagicMissile.cpp.i
+
+src/MagicMissile.s: src/MagicMissile.cpp.s
+.PHONY : src/MagicMissile.s
+
+# target to generate assembly for a file
+src/MagicMissile.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/MagicMissile.cpp.s
+.PHONY : src/MagicMissile.cpp.s
 
 src/MainSprite.o: src/MainSprite.cpp.o
 .PHONY : src/MainSprite.o
@@ -320,6 +392,54 @@ src/SceneObject.s: src/SceneObject.cpp.s
 src/SceneObject.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.s
 .PHONY : src/SceneObject.cpp.s
+
+src/SparkBolt.o: src/SparkBolt.cpp.o
+.PHONY : src/SparkBolt.o
+
+# target to build an object file
+src/SparkBolt.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/SparkBolt.cpp.o
+.PHONY : src/SparkBolt.cpp.o
+
+src/SparkBolt.i: src/SparkBolt.cpp.i
+.PHONY : src/SparkBolt.i
+
+# target to preprocess a source file
+src/SparkBolt.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/SparkBolt.cpp.i
+.PHONY : src/SparkBolt.cpp.i
+
+src/SparkBolt.s: src/SparkBolt.cpp.s
+.PHONY : src/SparkBolt.s
+
+# target to generate assembly for a file
+src/SparkBolt.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/SparkBolt.cpp.s
+.PHONY : src/SparkBolt.cpp.s
+
+src/SpellModifier.o: src/SpellModifier.cpp.o
+.PHONY : src/SpellModifier.o
+
+# target to build an object file
+src/SpellModifier.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/SpellModifier.cpp.o
+.PHONY : src/SpellModifier.cpp.o
+
+src/SpellModifier.i: src/SpellModifier.cpp.i
+.PHONY : src/SpellModifier.i
+
+# target to preprocess a source file
+src/SpellModifier.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/SpellModifier.cpp.i
+.PHONY : src/SpellModifier.cpp.i
+
+src/SpellModifier.s: src/SpellModifier.cpp.s
+.PHONY : src/SpellModifier.s
+
+# target to generate assembly for a file
+src/SpellModifier.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/sand_simulator.dir/build.make CMakeFiles/sand_simulator.dir/src/SpellModifier.cpp.s
+.PHONY : src/SpellModifier.cpp.s
 
 src/Sprite.o: src/Sprite.cpp.o
 .PHONY : src/Sprite.o
@@ -498,6 +618,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... sand_simulator"
+	@echo "... src/BouncingBolt.o"
+	@echo "... src/BouncingBolt.i"
+	@echo "... src/BouncingBolt.s"
 	@echo "... src/Bullet.o"
 	@echo "... src/Bullet.i"
 	@echo "... src/Bullet.s"
@@ -507,12 +630,18 @@ help:
 	@echo "... src/Config.o"
 	@echo "... src/Config.i"
 	@echo "... src/Config.s"
+	@echo "... src/FireBolt.o"
+	@echo "... src/FireBolt.i"
+	@echo "... src/FireBolt.s"
 	@echo "... src/Gun.o"
 	@echo "... src/Gun.i"
 	@echo "... src/Gun.s"
 	@echo "... src/LittlePurpleJumper.o"
 	@echo "... src/LittlePurpleJumper.i"
 	@echo "... src/LittlePurpleJumper.s"
+	@echo "... src/MagicMissile.o"
+	@echo "... src/MagicMissile.i"
+	@echo "... src/MagicMissile.s"
 	@echo "... src/MainSprite.o"
 	@echo "... src/MainSprite.i"
 	@echo "... src/MainSprite.s"
@@ -522,6 +651,12 @@ help:
 	@echo "... src/SceneObject.o"
 	@echo "... src/SceneObject.i"
 	@echo "... src/SceneObject.s"
+	@echo "... src/SparkBolt.o"
+	@echo "... src/SparkBolt.i"
+	@echo "... src/SparkBolt.s"
+	@echo "... src/SpellModifier.o"
+	@echo "... src/SpellModifier.i"
+	@echo "... src/SpellModifier.s"
 	@echo "... src/Sprite.o"
 	@echo "... src/Sprite.i"
 	@echo "... src/Sprite.s"

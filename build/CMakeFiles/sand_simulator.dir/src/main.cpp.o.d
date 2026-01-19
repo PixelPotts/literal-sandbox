@@ -361,8 +361,12 @@ CMakeFiles/sand_simulator.dir/src/main.cpp.o: \
  /usr/include/SDL2/SDL_mixer.h \
  /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Gun.h \
  /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Ammunition.h \
+ /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/MainSprite.h \
  /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Bullet.h \
  /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/ZLayers.h \
- /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/MainSprite.h \
  /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/LittlePurpleJumper.h \
- /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/BouncingBolt.h
+ /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/BouncingBolt.h \
+ /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/SparkBolt.h \
+ /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/FireBolt.h \
+ /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/MagicMissile.h \
+ /mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/SpellModifier.h

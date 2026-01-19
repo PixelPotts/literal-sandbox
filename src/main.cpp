@@ -17,6 +17,11 @@
 #include "ZLayers.h"
 #include "MainSprite.h"
 #include "LittlePurpleJumper.h"
+#include "BouncingBolt.h"
+#include "SparkBolt.h"
+#include "FireBolt.h"
+#include "MagicMissile.h"
+#include "SpellModifier.h"
 
 struct UIDropdown {
     SDL_Rect rect;
@@ -293,6 +298,11 @@ int main(int argc, char* argv[]) {
         {6, 0, 5, 8}    // Frame 1: jumping
     });
 
+    // Define inventory slot sprite (16,0 to 24,8) - 8x8 pixels
+    mainSprite.defineSprite("inventory_slot", {
+        {16, 0, 8, 8}
+    });
+
     // Vector to hold enemies
     std::vector<LittlePurpleJumper> purpleJumpers;
 
@@ -328,6 +338,16 @@ int main(int argc, char* argv[]) {
         collectibles.push_back(orb1);
     }
 
+    // Create bullet doubler collectible (100 right, 50 up from player start)
+    // Uses sprite from mainSprite at (16,0) - 8x8 pixels
+    std::shared_ptr<Collectible> bulletDoublerPickup = nullptr;
+    auto doubler = std::make_shared<Collectible>();
+    // For now use orb1 as placeholder until we create a sprite-based collectible
+    if (doubler->create("scenes/orb1.png", playerStartX + 100.0f, playerStartY - 50.0f, renderer)) {
+        world.addSceneObject(doubler->getSceneObject());
+        bulletDoublerPickup = doubler;
+    }
+
     // Create gun1 collectible
     std::vector<std::shared_ptr<Gun>> guns;
     std::shared_ptr<Gun> equippedGun = nullptr;
@@ -335,6 +355,29 @@ int main(int argc, char* argv[]) {
     if (gun1->create("scenes/gun1.png", 106.0f, 26062.0f, renderer)) {
         world.addSceneObject(gun1->getSceneObject());
         guns.push_back(gun1);
+
+        // Configure wand stats
+        gun1->getStats().name = "Starter Wand";
+        gun1->getStats().maxMana = 150;
+        gun1->getStats().currentMana = 150;
+        gun1->getStats().manaRechargeRate = 40.0f;
+        gun1->getStats().castDelay = 0.1f;
+        gun1->getStats().rechargeTime = 0.2f;
+
+        // Add ammunition types to the gun
+        auto sparkBolt = std::make_shared<SparkBolt>();
+        auto bouncingBolt = std::make_shared<BouncingBolt>();
+        auto fireBolt = std::make_shared<FireBolt>();
+        auto magicMissile = std::make_shared<MagicMissile>();
+
+        // Add modifiers to some spells
+        bouncingBolt->addModifier(std::make_shared<DamageUpModifier>(1.5f));
+        magicMissile->addModifier(std::make_shared<PiercingModifier>(2));
+
+        gun1->addAmmunition(sparkBolt);
+        gun1->addAmmunition(bouncingBolt);
+        gun1->addAmmunition(fireBolt);
+        gun1->addAmmunition(magicMissile);
     }
 
     // Position camera to center on player (with bounds clamping)
@@ -418,6 +461,10 @@ int main(int argc, char* argv[]) {
     bool shiftHeld = false;
     bool thrustHeld = false;  // Spacebar for jetpack thrust
     bool eKeyPressed = false;  // For collectible interaction
+    bool inventoryOpen = false;  // Toggle with 'I' key
+
+    // Inventory items (true = collected)
+    bool hasBulletDoubler = false;
 
     // Player physics
     float playerVelX = 0.0f;
@@ -428,10 +475,6 @@ int main(int argc, char* argv[]) {
     const float MAX_FALL_SPEED = 300.0f; // Terminal velocity
     const float AIR_FRICTION = 0.95f;    // Horizontal slowdown in air
     const float GROUND_FRICTION = 0.9f;  // Horizontal slowdown on ground
-
-    // Bullets for shooting
-    std::vector<Bullet> bullets;
-    bullets.reserve(50); // Pre-allocate for performance
 
     while (running) {
         Uint32 frameStart = SDL_GetTicks();
@@ -472,6 +515,9 @@ int main(int argc, char* argv[]) {
                         break;
                     case SDLK_e:
                         eKeyPressed = true;
+                        break;
+                    case SDLK_i:
+                        inventoryOpen = !inventoryOpen;
                         break;
                 }
             }
@@ -515,17 +561,7 @@ int main(int argc, char* argv[]) {
                     } else if (equippedGun && equippedGun->isEquipped()) {
                         Uint32 currentTime = SDL_GetTicks();
                         if (equippedGun->canFire(currentTime)) {
-                            float muzzleX, muzzleY;
-                            equippedGun->getMuzzlePosition(muzzleX, muzzleY);
-
-                            float worldMouseX = cam.x + (event.button.x / scaleX);
-                            float worldMouseY = cam.y + (event.button.y / scaleY);
-
-                            // Calculate direction from muzzle to mouse
-                            float dirX = worldMouseX - muzzleX;
-                            float dirY = worldMouseY - muzzleY;
-
-                            equippedGun->fire(bullets, muzzleX, muzzleY, dirX, dirY);
+                            equippedGun->fire(world);
 
                         }
                     }
@@ -694,102 +730,6 @@ int main(int argc, char* argv[]) {
                    camDirX, camDirY,  // movement direction for look-ahead
                    (float)World::WORLD_WIDTH, (float)World::WORLD_HEIGHT, deltaTime);
 
-        // Update bullets
-        for (auto& bullet : bullets) {
-            bullet.update(world, deltaTime, purpleJumpers);
-        }
-        // Remove inactive bullets
-        bullets.erase(
-            std::remove_if(bullets.begin(), bullets.end(),
-                [](const Bullet& b) { return !b.active; }),
-            bullets.end());
-
-        // Handle mouse dragging for particle spawning (right click)
-        int mouseX, mouseY;
-        Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
-        if (mouseState & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-            bool overDropdown = false;
-
-            if (mouseX >= dropdown.rect.x && mouseX < dropdown.rect.x + dropdown.rect.w) {
-                int dropdownHeight = dropdown.rect.h;
-                if (dropdown.isOpen) {
-                    dropdownHeight *= (dropdown.options.size() + 1);
-                }
-                if (mouseY >= dropdown.rect.y && mouseY < dropdown.rect.y + dropdownHeight) {
-                    overDropdown = true;
-                }
-            }
-
-            if (mouseX >= volumeDropdown.rect.x && mouseX < volumeDropdown.rect.x + volumeDropdown.rect.w) {
-                int dropdownHeight = volumeDropdown.rect.h;
-                if (volumeDropdown.isOpen) {
-                    dropdownHeight *= (volumeDropdown.options.size() + 1);
-                }
-                if (mouseY >= volumeDropdown.rect.y && mouseY < volumeDropdown.rect.y + dropdownHeight) {
-                    overDropdown = true;
-                }
-            }
-
-            if (mouseX >= fpsDropdown.rect.x && mouseX < fpsDropdown.rect.x + fpsDropdown.rect.w) {
-                int dropdownHeight = fpsDropdown.rect.h;
-                if (fpsDropdown.isOpen) {
-                    dropdownHeight *= (fpsDropdown.options.size() + 1);
-                }
-                if (mouseY >= fpsDropdown.rect.y && mouseY < fpsDropdown.rect.y + dropdownHeight) {
-                    overDropdown = true;
-                }
-            }
-
-            if (!overDropdown) {
-                // Convert screen coordinates to viewport coordinates, then to world coordinates
-                int viewX = (int)(mouseX / scaleX);
-                int viewY = (int)(mouseY / scaleY);
-                int worldX = (int)cam.x + viewX;
-                int worldY = (int)cam.y + viewY;
-
-                int volume = volumeValues[volumeDropdown.selectedIndex];
-                ParticleType selectedType = dropdown.types[dropdown.selectedIndex];
-
-                // Calculate radius for a filled circle with ~volume pixels
-                // Area = pi*r^2, so r = sqrt(volume/pi)
-                int radius = std::max(1, (int)std::sqrt((float)volume / 3.14159f));
-
-                // Spawn particles in a filled circle
-                for (int dy = -radius; dy <= radius; dy++) {
-                    for (int dx = -radius; dx <= radius; dx++) {
-                        if (dx * dx + dy * dy <= radius * radius) {
-                            int spawnX = worldX + dx;
-                            int spawnY = worldY + dy;
-
-                            if (selectedType == ParticleType::EMPTY) {
-                                world.setParticle(spawnX, spawnY, ParticleType::EMPTY);
-                            } else {
-                                world.spawnParticleAt(spawnX, spawnY, selectedType);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Update world simulation
-        Uint32 simulation_start = SDL_GetTicks();
-        static int debugFrameCount = 0;
-        debugFrameCount++;
-        for (int i = 0; i < config.fallSpeed; ++i) {
-            world.update(deltaTime / config.fallSpeed);
-        }
-        last_sim_time = SDL_GetTicks() - simulation_start;
-
-        // DEBUG: Print every 60 frames
-        if (debugFrameCount % 60 == 0) {
-            int awakeChunks = 0;
-            const auto& pChunks = world.getParticleChunks();
-            for (const auto& pc : pChunks) {
-                if (pc.isAwake) awakeChunks++;
-            }
-        }
-
         // Update and check collectibles
         float playerW = (float)playerSprite->getWidth();
         float playerH = (float)playerSprite->getHeight();
@@ -798,6 +738,25 @@ int main(int argc, char* argv[]) {
                 collectible->checkCollection(player->getX(), player->getY(), playerW, playerH, eKeyPressed);
                 collectible->update(deltaTime);
             }
+        }
+
+        // Check for bullet doubler collection
+        if (bulletDoublerPickup && !hasBulletDoubler && bulletDoublerPickup->isActive()) {
+            if (bulletDoublerPickup->checkCollection(player->getX(), player->getY(), playerW, playerH, eKeyPressed)) {
+                hasBulletDoubler = true;
+                std::cout << "Bullet Doubler acquired!" << std::endl;
+
+                // Double the projectile count for all ammunition on equipped gun
+                if (equippedGun) {
+                    for (int i = 0; i < equippedGun->getAmmunitionCount(); ++i) {
+                        auto ammo = equippedGun->getAmmunition(i);
+                        if (ammo) {
+                            ammo->projectileCount *= 2;
+                        }
+                    }
+                }
+            }
+            bulletDoublerPickup->update(deltaTime);
         }
 
         // Check for gun collection
@@ -818,6 +777,7 @@ int main(int argc, char* argv[]) {
             float playerCenterX = player->getX() + playerW / 2.0f;
             float playerCenterY = player->getY() + playerH / 2.0f;
             equippedGun->updateEquipped(playerCenterX, playerCenterY, cursorWorldX, cursorWorldY);
+            equippedGun->update(deltaTime);  // Update mana recharge
         }
 
         // Spawn enemies from detected spawn points
@@ -836,6 +796,11 @@ int main(int argc, char* argv[]) {
         float playerCenterYForEnemy = player->getY() + playerH / 2.0f;
         for (auto& jumper : purpleJumpers) {
             jumper.update(deltaTime, playerCenterXForEnemy, playerCenterYForEnemy);
+        }
+
+        // Update gun ammunition (bullets)
+        if (equippedGun && equippedGun->isEquipped()) {
+            equippedGun->updateAmmunition(deltaTime, world, purpleJumpers);
         }
 
                 // Ensure OpenGL context is current
@@ -962,27 +927,10 @@ int main(int argc, char* argv[]) {
 
         
 
-                                                // Draw bullets
-
-        
-
-        
-
-                                                for (auto& bullet : bullets) {
-
-        
-
-        
-
-                                                    bullet.draw(pixels, viewportWidth, viewportHeight, cam.x, cam.y, renderer);
-
-        
-
-        
-
-                                                }
-
-        
+                // Render gun ammunition (bullets) to pixel buffer BEFORE updating texture
+                if (equippedGun && equippedGun->isEquipped()) {
+                    equippedGun->renderAmmunition(renderer, pixels, viewportWidth, viewportHeight, cam.x, cam.y, scaleX, scaleY);
+                }
 
                 // Update texture
                 SDL_UpdateTexture(viewportTexture, nullptr, pixels.data(), viewportWidth * sizeof(Uint32));
@@ -1074,6 +1022,9 @@ int main(int argc, char* argv[]) {
                 for (auto& collectible : collectibles) {
                     collectible->render(renderer, cam.x, cam.y, scaleX, scaleY);
                 }
+                if (bulletDoublerPickup) {
+                    bulletDoublerPickup->render(renderer, cam.x, cam.y, scaleX, scaleY);
+                }
 
         
 
@@ -1094,6 +1045,7 @@ int main(int argc, char* argv[]) {
 
                         // Debug chunk outlines disabled
                 // Draw outlines for awake particle chunks
+                /*
                 SDL_SetRenderDrawColor(renderer, 255, 0, 0, 100); // Red, semi-transparent
                 int p_visWorldX_start, p_visWorldY_start, p_visWorldX_end, p_visWorldY_end;
                 world.getVisibleRegion(p_visWorldX_start, p_visWorldY_start, p_visWorldX_end, p_visWorldY_end);
@@ -1116,6 +1068,7 @@ int main(int argc, char* argv[]) {
                     }
                 }
                 SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+                */
 
                         // Draw player colliders (disabled)
 
@@ -1151,6 +1104,47 @@ int main(int argc, char* argv[]) {
                 }
 
         
+
+                // Draw mana bar (top right)
+                if (equippedGun && equippedGun->isEquipped()) {
+                    int manaBarWidth = 120;
+                    int manaBarHeight = 12;
+                    int manaBarX = actualWindowW - manaBarWidth - 10;
+                    int manaBarY = 10;
+
+                    // Background
+                    SDL_SetRenderDrawColor(renderer, 20, 20, 40, 200);
+                    SDL_Rect manaBg = {manaBarX - 2, manaBarY - 2, manaBarWidth + 4, manaBarHeight + 4};
+                    SDL_RenderFillRect(renderer, &manaBg);
+
+                    // Empty bar
+                    SDL_SetRenderDrawColor(renderer, 30, 30, 60, 255);
+                    SDL_Rect manaEmpty = {manaBarX, manaBarY, manaBarWidth, manaBarHeight};
+                    SDL_RenderFillRect(renderer, &manaEmpty);
+
+                    // Filled bar (blue gradient effect)
+                    float manaPercent = equippedGun->getManaPercent();
+                    int filledWidth = (int)(manaBarWidth * manaPercent);
+                    if (filledWidth > 0) {
+                        SDL_SetRenderDrawColor(renderer, 50, 100, 255, 255);
+                        SDL_Rect manaFilled = {manaBarX, manaBarY, filledWidth, manaBarHeight};
+                        SDL_RenderFillRect(renderer, &manaFilled);
+
+                        // Highlight on top
+                        SDL_SetRenderDrawColor(renderer, 100, 150, 255, 255);
+                        SDL_Rect manaHighlight = {manaBarX, manaBarY, filledWidth, 3};
+                        SDL_RenderFillRect(renderer, &manaHighlight);
+                    }
+
+                    // Border
+                    SDL_SetRenderDrawColor(renderer, 80, 80, 120, 255);
+                    SDL_RenderDrawRect(renderer, &manaEmpty);
+
+                    // Mana text
+                    SDL_Color manaTextColor = {150, 180, 255, 255};
+                    std::string manaText = std::to_string(equippedGun->getMana()) + "/" + std::to_string(equippedGun->getMaxMana());
+                    drawText(renderer, smallFont, manaText, manaBarX + manaBarWidth / 2 - 15, manaBarY - 1, manaTextColor);
+                }
 
                 // Draw stats
 
@@ -1278,7 +1272,60 @@ int main(int argc, char* argv[]) {
 
                 drawText(renderer, smallFont, "WASD to move, Shift for fast", 5, actualWindowH - 45, hintColor);
 
-        
+                // Draw inventory if open
+                if (inventoryOpen) {
+                    // Calculate inventory position (centered on screen)
+                    int slotSize = 32;  // Scaled size of each slot
+                    int slotPadding = 4;
+                    int slotsPerRow = 5;
+                    int numSlots = 10;
+                    int numRows = (numSlots + slotsPerRow - 1) / slotsPerRow;
+
+                    int invWidth = slotsPerRow * (slotSize + slotPadding) + slotPadding;
+                    int invHeight = numRows * (slotSize + slotPadding) + slotPadding;
+                    int invX = (actualWindowW - invWidth) / 2;
+                    int invY = (actualWindowH - invHeight) / 2;
+
+                    // Draw background box
+                    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+                    SDL_SetRenderDrawColor(renderer, 20, 20, 30, 220);
+                    SDL_Rect invBg = {invX - 10, invY - 30, invWidth + 20, invHeight + 40};
+                    SDL_RenderFillRect(renderer, &invBg);
+
+                    // Draw border
+                    SDL_SetRenderDrawColor(renderer, 100, 100, 120, 255);
+                    SDL_RenderDrawRect(renderer, &invBg);
+
+                    // Draw title
+                    SDL_Color titleColor = {255, 255, 255, 255};
+                    drawText(renderer, font, "Inventory", invX, invY - 25, titleColor);
+
+                    // Draw 10 inventory slots
+                    SDL_Texture* slotTex = mainSprite.getTexture();
+                    for (int i = 0; i < numSlots; ++i) {
+                        int row = i / slotsPerRow;
+                        int col = i % slotsPerRow;
+                        int slotX = invX + slotPadding + col * (slotSize + slotPadding);
+                        int slotY = invY + slotPadding + row * (slotSize + slotPadding);
+
+                        // Draw empty slot background
+                        SDL_SetRenderDrawColor(renderer, 40, 40, 50, 255);
+                        SDL_Rect slotBg = {slotX, slotY, slotSize, slotSize};
+                        SDL_RenderFillRect(renderer, &slotBg);
+                        SDL_SetRenderDrawColor(renderer, 70, 70, 90, 255);
+                        SDL_RenderDrawRect(renderer, &slotBg);
+
+                        // Draw item in slot 0 if bullet doubler is collected
+                        if (i == 0 && hasBulletDoubler && slotTex) {
+                            SDL_SetTextureBlendMode(slotTex, SDL_BLENDMODE_BLEND);
+                            SDL_Rect srcRect = {16, 0, 8, 8};  // Bullet doubler sprite
+                            SDL_Rect dstRect = {slotX + 4, slotY + 4, slotSize - 8, slotSize - 8};
+                            SDL_RenderCopy(renderer, slotTex, &srcRect, &dstRect);
+                        }
+                    }
+
+                    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+                }
 
                 SDL_RenderPresent(renderer);
 

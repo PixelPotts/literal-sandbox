@@ -17,9 +17,7 @@
     <option name="reloaded" value="true" />
   </component>
   <component name="CMakeRunConfigurationManager">
-    <generated>
-      <config projectName="SandSimulator" targetName="sand_simulator" />
-    </generated>
+    <generated />
   </component>
   <component name="CMakeSettings">
     <configurations>
@@ -28,13 +26,28 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d2824a37-c7f4-436c-8188-15d8abab96d8" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/editor.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/editor.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/Makefile2" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/Makefile2" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/progress.marks" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/progress.marks" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/DependInfo.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/DependInfo.cmake" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/build.make" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/build.make" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/cmake_clean.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/cmake_clean.cmake" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/compiler_depend.internal" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/compiler_depend.internal" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/compiler_depend.make" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/compiler_depend.make" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/link.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/link.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/progress.make" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/progress.make" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o.d" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o.d" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/Gun.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/Gun.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/Gun.cpp.o.d" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/Gun.cpp.o.d" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/LittlePurpleJumper.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/LittlePurpleJumper.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/World.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/World.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/main.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/main.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/main.cpp.o.d" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeFiles/sand_simulator.dir/src/main.cpp.o.d" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/CMakeCache.txt" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeCache.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/CMakeConfigureLog.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/CMakeConfigureLog.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/FindOpenMP/ompver_CXX.bin" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/FindOpenMP/ompver_CXX.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/Makefile.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/Makefile.cmake" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/CMakeFiles/Makefile2" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/Makefile2" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/CMakeFiles/progress.marks" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/progress.marks" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/DependInfo.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/DependInfo.cmake" afterDir="false" />
@@ -44,23 +57,23 @@
       <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/compiler_depend.make" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/compiler_depend.make" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/link.txt" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/link.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/progress.make" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/progress.make" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Config.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Config.cpp.o" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Config.cpp.o.d" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Config.cpp.o.d" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/SandSimulator.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/SandSimulator.cpp.o" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/World.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/World.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.o.d" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.o.d" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o.d" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o.d" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Gun.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Gun.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Gun.cpp.o.d" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/Gun.cpp.o.d" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/main.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/main.cpp.o" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/main.cpp.o.d" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/sand_simulator.dir/src/main.cpp.o.d" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/build/Makefile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/rules.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/sand_simulator" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/.Config.cpp.swp" beforeDir="false" afterPath="$PROJECT_DIR$/src/.Config.cpp.swp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Config.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/Config.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Config.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/Config.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Texturize.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/Texturize.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Texturize.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/Texturize.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/World.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/World.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/World.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/World.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/sand_simulator" beforeDir="false" afterPath="$PROJECT_DIR$/build/sand_simulator" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sand_simulator" beforeDir="false" afterPath="$PROJECT_DIR$/sand_simulator" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scenes/mainSprite.aseprite" beforeDir="false" afterPath="$PROJECT_DIR$/scenes/mainSprite.aseprite" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scenes/mainSprite.png" beforeDir="false" afterPath="$PROJECT_DIR$/scenes/mainSprite.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Bullet.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/Bullet.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Bullet.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/Bullet.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Gun.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/Gun.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Gun.h" beforeDir="false" afterPath="$PROJECT_DIR$/src/Gun.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -146,11 +159,6 @@
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
     </configuration>
-    <configuration name="sand_simulator" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="SandSimulator" TARGET_NAME="sand_simulator" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="SandSimulator" RUN_TARGET_NAME="sand_simulator">
-      <method v="2">
-        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      </method>
-    </configuration>
   </component>
   <component name="RustProjectSettings">
     <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
@@ -162,7 +170,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1768712339265</updated>
-      <workItem from="1768712340385" duration="1986000" />
+      <workItem from="1768712340385" duration="2857000" />
     </task>
     <servers />
   </component>

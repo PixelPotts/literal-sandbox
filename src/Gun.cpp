@@ -1,4 +1,5 @@
 #include "Gun.h"
+#include "LittlePurpleJumper.h"
 #include <iostream>
 #include <SDL.h> // For SDL_GetTicks()
 
@@ -9,12 +10,23 @@ Gun::Gun()
     , pivotY(0)
     , angle(0)
     , flipped(false)
-    , fireRate(5.0f) // 5 bullets per second
     , lastFireTime(0)
     , spriteWidth(0)
     , spriteHeight(0)
     , damage(3)
+    , currentAmmunition(0)
 {
+    // Default wand stats (can be customized per gun instance)
+    stats.name = "Basic Wand";
+    stats.maxMana = 100;
+    stats.currentMana = 100;
+    stats.manaRechargeRate = 30.0f;
+    stats.manaRechargeDelay = 0.3f;
+    stats.castDelay = 0.15f;
+    stats.rechargeTime = 0.3f;
+    stats.speedMultiplier = 1.0f;
+    stats.damageMultiplier = 1.0f;
+    stats.capacity = 4;
 }
 
 bool Gun::checkCollection(float playerX, float playerY, float playerW, float playerH, bool eKeyPressed) {
@@ -136,13 +148,120 @@ void Gun::getMuzzlePosition(float& outX, float& outY) const {
     outY = pivotY + std::sin(angle) * muzzleOffset;
 }
 
-void Gun::fire(std::vector<Bullet>& bullets, float startX, float startY, float targetX, float targetY) {
-    bullets.emplace_back(startX, startY, targetX, targetY, damage);
-    lastFireTime = SDL_GetTicks(); // Update last fire time internally
+bool Gun::fire(World& world) {
+    if (ammunition.empty()) return false;
+
+    // Check if we're in recharge state
+    if (cycleComplete) return false;
+
+    // Get current ammo and check mana cost
+    auto& ammo = ammunition[currentAmmunition];
+    int totalManaCost = ammo->manaCost;
+
+    // Add modifier costs
+    // (modifiers add to base cost through manaCostModifier property)
+
+    if (stats.currentMana < totalManaCost) {
+        // Not enough mana
+        return false;
+    }
+
+    // Deduct mana
+    stats.currentMana -= totalManaCost;
+    timeSinceLastFire = 0.0f;  // Reset recharge delay timer
+
+    float muzzleX, muzzleY;
+    getMuzzlePosition(muzzleX, muzzleY);
+
+    // Apply wand spread
+    float wandSpread = stats.spreadDegrees * (3.14159f / 180.0f);
+    float fireAngle = angle + wandSpread * ((float)rand() / RAND_MAX - 0.5f);
+
+    // Apply wand damage multiplier
+    int finalDamage = (int)(damage * stats.damageMultiplier);
+
+    ammo->fire(world, muzzleX, muzzleY, fireAngle, finalDamage);
+    lastFireTime = SDL_GetTicks();
+
+    // Advance to next ammunition
+    currentAmmunition++;
+    if (currentAmmunition >= (int)ammunition.size()) {
+        currentAmmunition = 0;
+        cycleComplete = true;  // Start recharge
+        rechargeTimer = 0.0f;
+    }
+
+    return true;
 }
 
 bool Gun::canFire(Uint32 currentTime) {
-    Uint32 timeSinceLastFire = currentTime - lastFireTime;
-    Uint32 fireDelay = (Uint32)(1000.0f / fireRate);
-    return timeSinceLastFire >= fireDelay;
+    // Can't fire while recharging the wand
+    if (cycleComplete) {
+        // std::cout << "canFire: false (recharging)" << std::endl;
+        return false;
+    }
+
+    // Check cast delay
+    Uint32 timeSinceLast = currentTime - lastFireTime;
+    Uint32 castDelayMs = (Uint32)(stats.castDelay * 1000.0f);
+    bool canFire = timeSinceLast >= castDelayMs;
+    // if (!canFire) std::cout << "canFire: false (delay " << timeSinceLast << "/" << castDelayMs << ")" << std::endl;
+    return canFire;
+}
+
+void Gun::update(float deltaTime) {
+    if (!equipped) return;
+
+    timeSinceLastFire += deltaTime;
+
+    // Handle wand recharge (after cycling through all spells)
+    if (cycleComplete) {
+        rechargeTimer += deltaTime;
+        if (rechargeTimer >= stats.rechargeTime) {
+            cycleComplete = false;
+            rechargeTimer = 0.0f;
+        }
+    }
+
+    // Handle mana recharge (after delay)
+    if (timeSinceLastFire >= stats.manaRechargeDelay && stats.currentMana < stats.maxMana) {
+        manaRechargeAccumulator += stats.manaRechargeRate * deltaTime;
+        if (manaRechargeAccumulator >= 1.0f) {
+            int manaToAdd = (int)manaRechargeAccumulator;
+            stats.currentMana += manaToAdd;
+            manaRechargeAccumulator -= manaToAdd;
+            if (stats.currentMana > stats.maxMana) {
+                stats.currentMana = stats.maxMana;
+                manaRechargeAccumulator = 0.0f;
+            }
+        }
+    }
+}
+
+std::shared_ptr<Ammunition> Gun::getCurrentAmmunition() const {
+    if (ammunition.empty()) return nullptr;
+    return ammunition[currentAmmunition];
+}
+
+void Gun::addAmmunition(std::shared_ptr<Ammunition> ammo) {
+    if (ammo && bulletSpriteSheet) {
+        ammo->setSpriteSheet(bulletSpriteSheet);
+    }
+    ammunition.push_back(ammo);
+}
+
+void Gun::clearAmmunition() {
+    ammunition.clear();
+}
+
+void Gun::updateAmmunition(float deltaTime, World& world, std::vector<LittlePurpleJumper>& enemies) {
+    for (auto& ammo : ammunition) {
+        ammo->update(deltaTime, world, enemies);
+    }
+}
+
+void Gun::renderAmmunition(SDL_Renderer* renderer, std::vector<Uint32>& pixels, int viewportWidth, int viewportHeight, float cameraX, float cameraY, float scaleX, float scaleY) {
+    for (auto& ammo : ammunition) {
+        ammo->render(renderer, pixels, viewportWidth, viewportHeight, cameraX, cameraY, scaleX, scaleY);
+    }
 }

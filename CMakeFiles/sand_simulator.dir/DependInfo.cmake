@@ -8,14 +8,19 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/BouncingBolt.cpp" "CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/BouncingBolt.cpp.o.d"
   "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Bullet.cpp" "CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/Bullet.cpp.o.d"
   "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Collectible.cpp" "CMakeFiles/sand_simulator.dir/src/Collectible.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/Collectible.cpp.o.d"
   "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Config.cpp" "CMakeFiles/sand_simulator.dir/src/Config.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/Config.cpp.o.d"
+  "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/FireBolt.cpp" "CMakeFiles/sand_simulator.dir/src/FireBolt.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/FireBolt.cpp.o.d"
   "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Gun.cpp" "CMakeFiles/sand_simulator.dir/src/Gun.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/Gun.cpp.o.d"
   "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/LittlePurpleJumper.cpp" "CMakeFiles/sand_simulator.dir/src/LittlePurpleJumper.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/LittlePurpleJumper.cpp.o.d"
+  "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/MagicMissile.cpp" "CMakeFiles/sand_simulator.dir/src/MagicMissile.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/MagicMissile.cpp.o.d"
   "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/MainSprite.cpp" "CMakeFiles/sand_simulator.dir/src/MainSprite.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/MainSprite.cpp.o.d"
   "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/SandSimulator.cpp" "CMakeFiles/sand_simulator.dir/src/SandSimulator.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/SandSimulator.cpp.o.d"
   "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/SceneObject.cpp" "CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/SceneObject.cpp.o.d"
+  "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/SparkBolt.cpp" "CMakeFiles/sand_simulator.dir/src/SparkBolt.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/SparkBolt.cpp.o.d"
+  "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/SpellModifier.cpp" "CMakeFiles/sand_simulator.dir/src/SpellModifier.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/SpellModifier.cpp.o.d"
   "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Sprite.cpp" "CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/Sprite.cpp.o.d"
   "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/Texturize.cpp" "CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/Texturize.cpp.o.d"
   "/mnt/1tb-ssd/EverythingExplodes/sand-simulator/src/World.cpp" "CMakeFiles/sand_simulator.dir/src/World.cpp.o" "gcc" "CMakeFiles/sand_simulator.dir/src/World.cpp.o.d"
